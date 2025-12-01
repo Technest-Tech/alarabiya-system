@@ -1,0 +1,41 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import "@fullcalendar/core/index.css";
+@import "@fullcalendar/daygrid/index.css";
+@import "@fullcalendar/timegrid/index.css";
+
+.fc {
+    --fc-event-border-color: transparent;
+    --fc-event-bg-color: rgba(79, 70, 229, 0.1);
+    --fc-event-text-color: #1f2937;
+}
+
+.fc .fc-toolbar-title {
+    @apply text-xl font-semibold text-gray-900 dark:text-gray-100;
+}
+
+.fc .fc-button-primary {
+    @apply rounded-lg border border-indigo-600 bg-indigo-600 text-sm font-medium text-white shadow transition hover:bg-indigo-700 focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2;
+}
+
+.fc .fc-button-primary:not(:disabled).fc-button-active {
+    @apply bg-indigo-700;
+}
+
+.fc-event-card {
+    @apply space-y-1 rounded-xl border border-indigo-200 bg-indigo-50 px-3 py-2 text-xs leading-tight text-indigo-700 dark:border-indigo-800 dark:bg-indigo-900/40 dark:text-indigo-200;
+}
+
+.fc-event-card .fc-event-time {
+    @apply text-[11px] font-semibold uppercase tracking-wide;
+}
+
+.fc-event-card .fc-event-title {
+    @apply text-sm font-semibold;
+}
+
+.fc-event-card .fc-event-meta {
+    @apply text-[11px] text-indigo-500 dark:text-indigo-200/80;
+}
