@@ -32,7 +32,7 @@
                     <div class="mb-4">
                         <p class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Teacher</p>
                         <p class="text-sm text-gray-900 dark:text-white">
-                            {{ optional($package->student->teacher->user)->name ?? 'Unassigned' }}
+                            {{ $package->student->teacher?->user?->name ?? 'Unassigned' }}
                         </p>
                     </div>
 

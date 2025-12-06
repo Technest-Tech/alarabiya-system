@@ -192,11 +192,11 @@
                                     <div class="flex items-center">
                                         <div class="flex-shrink-0 h-8 w-8">
                                             <div class="flex h-8 w-8 items-center justify-center rounded-full bg-purple-100 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 font-semibold text-xs">
-                                                {{ strtoupper(substr(optional($lesson->teacher->user)->name ?? 'T', 0, 1)) }}
+                                                {{ strtoupper(substr($lesson->teacher?->user?->name ?? 'T', 0, 1)) }}
                                             </div>
                                         </div>
                                         <div class="ml-3">
-                                            <div class="text-sm text-gray-900 dark:text-white">{{ optional($lesson->teacher->user)->name ?? '—' }}</div>
+                                            <div class="text-sm text-gray-900 dark:text-white">{{ $lesson->teacher?->user?->name ?? '—' }}</div>
                                         </div>
                                     </div>
                                 </td>

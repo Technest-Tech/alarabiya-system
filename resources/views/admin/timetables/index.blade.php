@@ -178,7 +178,7 @@
                                     </div>
                                 </td>
                                 <td class="whitespace-nowrap px-6 py-4 text-sm text-gray-900 dark:text-gray-100">
-                                    <div class="font-semibold">{{ optional($timetable->teacher->user)->name ?? '—' }}</div>
+                                    <div class="font-semibold">{{ $timetable->teacher?->user?->name ?? '—' }}</div>
                                     <div class="text-xs text-gray-500 dark:text-gray-400">
                                         {{ $timetable->teacher_timezone ?? 'Timezone N/A' }} • {{ $teacherStartTime }} – {{ $teacherEndTime }}
                                     </div>

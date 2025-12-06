@@ -33,7 +33,7 @@
                             <div>
                                 <h3 class="text-lg font-semibold text-gray-900 dark:text-white">{{ $student->name }}</h3>
                                 <p class="text-sm text-gray-500 dark:text-gray-400">
-                                    {{ optional($student->teacher->user)->name ?? 'Unassigned' }}
+                                    {{ $student->teacher?->user?->name ?? 'Unassigned' }}
                                 </p>
                             </div>
                         </div>

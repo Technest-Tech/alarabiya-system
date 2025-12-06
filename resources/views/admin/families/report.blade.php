@@ -141,7 +141,7 @@
             <div class="student-header">
                 <div>
                     <h2>{{ $student->name }}</h2>
-                    <p>Teacher: {{ optional($student->teacher->user)->name ?? 'Unassigned' }}</p>
+                    <p>Teacher: {{ $student->teacher?->user?->name ?? 'Unassigned' }}</p>
                 </div>
                 <div>
                     <span class="badge">Total</span>

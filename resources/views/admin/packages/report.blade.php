@@ -108,7 +108,7 @@
         </div>
         <div class="row">
             <span class="label">Teacher:</span>
-            <span>{{ optional($student->teacher->user)->name ?? 'Unassigned' }}</span>
+            <span>{{ $student->teacher?->user?->name ?? 'Unassigned' }}</span>
         </div>
         <div class="row">
             <span class="label">Currency:</span>
