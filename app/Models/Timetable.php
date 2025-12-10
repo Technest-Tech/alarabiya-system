@@ -19,6 +19,7 @@ class Timetable extends Model
         'teacher_timezone',
         'start_time',
         'end_time',
+        'day_times',
         'student_time_from',
         'student_time_to',
         'time_difference_hours',
@@ -33,6 +34,7 @@ class Timetable extends Model
 
     protected $casts = [
         'days_of_week' => 'array',
+        'day_times' => 'array',
         'start_date' => 'date',
         'end_date' => 'date',
         'deactivated_at' => 'datetime',

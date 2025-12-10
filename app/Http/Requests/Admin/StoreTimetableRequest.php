@@ -24,8 +24,12 @@ class StoreTimetableRequest extends FormRequest
             'course_name' => ['required', 'string', 'max:255'],
             'timezone' => ['nullable', Rule::in($timezones)],
             'teacher_timezone' => ['nullable', Rule::in($timezones)],
-            'start_time' => ['required', 'date_format:H:i'],
-            'end_time' => ['required', 'date_format:H:i'],
+            'use_per_day_times' => ['nullable', 'boolean'],
+            'start_time' => ['nullable', 'date_format:H:i'],
+            'end_time' => ['nullable', 'date_format:H:i'],
+            'day_times' => ['nullable', 'array'],
+            'day_times.*.start_time' => ['required_with:day_times', 'date_format:H:i'],
+            'day_times.*.end_time' => ['required_with:day_times', 'date_format:H:i'],
             'start_date' => ['required', 'date'],
             'end_date' => ['required', 'date', 'after_or_equal:start_date'],
             'days_of_week' => ['required', 'array', 'min:1'],
@@ -38,22 +42,65 @@ class StoreTimetableRequest extends FormRequest
     public function withValidator($validator): void
     {
         $validator->after(function ($validator): void {
-            $start = $this->input('start_time');
-            $end = $this->input('end_time');
+            $usePerDayTimes = $this->boolean('use_per_day_times', false);
 
-            if (! $start || ! $end) {
-                return;
+            // Validate that either single times or per-day times are provided
+            if (!$usePerDayTimes) {
+                if (!$this->input('start_time') || !$this->input('end_time')) {
+                    $validator->errors()->add('start_time', 'Start time and end time are required when not using per-day times.');
+                    $validator->errors()->add('end_time', 'Start time and end time are required when not using per-day times.');
+                }
             }
 
-            try {
-                $startTime = Carbon::createFromFormat('H:i', $start);
-                $endTime = Carbon::createFromFormat('H:i', $end);
-            } catch (\InvalidArgumentException) {
-                return;
-            }
+            if ($usePerDayTimes) {
+                // Validate per-day times
+                $dayTimes = $this->input('day_times', []);
+                $daysOfWeek = $this->input('days_of_week', []);
 
-            if ($endTime->equalTo($startTime)) {
-                $validator->errors()->add('end_time', 'End time must be after the start time.');
+                // Check that all selected days have times
+                foreach ($daysOfWeek as $day) {
+                    if (!isset($dayTimes[$day])) {
+                        $validator->errors()->add("day_times.{$day}", "Times are required for {$day}.");
+                        continue;
+                    }
+
+                    $dayStart = $dayTimes[$day]['start_time'] ?? null;
+                    $dayEnd = $dayTimes[$day]['end_time'] ?? null;
+
+                    if (!$dayStart || !$dayEnd) {
+                        continue;
+                    }
+
+                    try {
+                        $startTime = Carbon::createFromFormat('H:i', $dayStart);
+                        $endTime = Carbon::createFromFormat('H:i', $dayEnd);
+                    } catch (\InvalidArgumentException) {
+                        continue;
+                    }
+
+                    if ($endTime->equalTo($startTime) || $endTime->lessThan($startTime)) {
+                        $validator->errors()->add("day_times.{$day}.end_time", "End time must be after the start time for {$day}.");
+                    }
+                }
+            } else {
+                // Validate single time for all days
+                $start = $this->input('start_time');
+                $end = $this->input('end_time');
+
+                if (! $start || ! $end) {
+                    return;
+                }
+
+                try {
+                    $startTime = Carbon::createFromFormat('H:i', $start);
+                    $endTime = Carbon::createFromFormat('H:i', $end);
+                } catch (\InvalidArgumentException) {
+                    return;
+                }
+
+                if ($endTime->equalTo($startTime) || $endTime->lessThan($startTime)) {
+                    $validator->errors()->add('end_time', 'End time must be after the start time.');
+                }
             }
         });
     }
@@ -75,14 +122,53 @@ class StoreTimetableRequest extends FormRequest
                 ),
             ]);
         }
+
+        if ($this->has('use_per_day_times')) {
+            $this->merge([
+                'use_per_day_times' => filter_var(
+                    $this->input('use_per_day_times'),
+                    FILTER_VALIDATE_BOOLEAN,
+                    FILTER_NULL_ON_FAILURE
+                ),
+            ]);
+        }
     }
 
     public function payload(): array
     {
         $data = $this->validated();
+        $usePerDayTimes = $this->boolean('use_per_day_times', false);
 
-        $data['start_time'] = Carbon::createFromFormat('H:i', $data['start_time'])->format('H:i:s');
-        $data['end_time'] = Carbon::createFromFormat('H:i', $data['end_time'])->format('H:i:s');
+        if ($usePerDayTimes) {
+            // Handle per-day times
+            $dayTimes = $this->input('day_times', []);
+            $formattedDayTimes = [];
+            
+            foreach ($dayTimes as $day => $times) {
+                if (isset($times['start_time']) && isset($times['end_time'])) {
+                    $formattedDayTimes[$day] = [
+                        'start_time' => Carbon::createFromFormat('H:i', $times['start_time'])->format('H:i:s'),
+                        'end_time' => Carbon::createFromFormat('H:i', $times['end_time'])->format('H:i:s'),
+                    ];
+                }
+            }
+            
+            $data['day_times'] = $formattedDayTimes;
+            // Set default start_time and end_time for backward compatibility (use first day's times)
+            if (!empty($formattedDayTimes)) {
+                $firstDay = array_key_first($formattedDayTimes);
+                $data['start_time'] = $formattedDayTimes[$firstDay]['start_time'];
+                $data['end_time'] = $formattedDayTimes[$firstDay]['end_time'];
+            }
+        } else {
+            // Handle single time for all days
+            if (isset($data['start_time']) && isset($data['end_time'])) {
+                $data['start_time'] = Carbon::createFromFormat('H:i', $data['start_time'])->format('H:i:s');
+                $data['end_time'] = Carbon::createFromFormat('H:i', $data['end_time'])->format('H:i:s');
+            }
+            $data['day_times'] = null;
+        }
+
         $data['days_of_week'] = array_values($data['days_of_week']);
         $data['is_active'] = true;
 

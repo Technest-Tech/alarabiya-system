@@ -106,24 +106,52 @@ class TimetableGenerator
         }
         // For Egypt, leave student times unchanged
 
+        // Check if using per-day times
+        $dayTimes = $timetable->day_times;
+        $usePerDayTimes = !empty($dayTimes) && is_array($dayTimes);
+
+        // Map day names to normalized lowercase
+        $dayNameMap = [
+            'sunday' => 'sunday',
+            'monday' => 'monday',
+            'tuesday' => 'tuesday',
+            'wednesday' => 'wednesday',
+            'thursday' => 'thursday',
+            'friday' => 'friday',
+            'saturday' => 'saturday',
+        ];
+
         $period = CarbonPeriod::create($startDate, $endDate);
 
         return collect($period)
             ->filter(fn (Carbon $date): bool => $days->contains($date->dayOfWeek))
-            ->map(function (Carbon $date) use ($timetable, $teacherTimezone): array {
+            ->map(function (Carbon $date) use ($timetable, $teacherTimezone, $usePerDayTimes, $dayTimes, $dayNameMap): array {
+                // Get day name in lowercase
+                $dayName = strtolower($date->format('l'));
+                $normalizedDayName = $dayNameMap[$dayName] ?? $dayName;
+
+                // Determine start and end times
+                if ($usePerDayTimes && isset($dayTimes[$normalizedDayName])) {
+                    $dayStartTime = $dayTimes[$normalizedDayName]['start_time'] ?? $timetable->start_time;
+                    $dayEndTime = $dayTimes[$normalizedDayName]['end_time'] ?? $timetable->end_time;
+                } else {
+                    $dayStartTime = $timetable->start_time;
+                    $dayEndTime = $timetable->end_time;
+                }
+
                 $endDateInstance = $date->copy();
-                if (Carbon::createFromFormat('H:i:s', $timetable->end_time)->lessThanOrEqualTo(Carbon::createFromFormat('H:i:s', $timetable->start_time))) {
+                if (Carbon::createFromFormat('H:i:s', $dayEndTime)->lessThanOrEqualTo(Carbon::createFromFormat('H:i:s', $dayStartTime))) {
                     $endDateInstance = $endDateInstance->addDay();
                 }
 
                 // Use teacher timezone for event times
                 $startAt = Carbon::parse(
-                    sprintf('%s %s', $date->toDateString(), $timetable->start_time),
+                    sprintf('%s %s', $date->toDateString(), $dayStartTime),
                     $teacherTimezone
                 )->utc();
 
                 $endAt = Carbon::parse(
-                    sprintf('%s %s', $endDateInstance->toDateString(), $timetable->end_time),
+                    sprintf('%s %s', $endDateInstance->toDateString(), $dayEndTime),
                     $teacherTimezone
                 )->utc();
 
@@ -147,10 +175,24 @@ class TimetableGenerator
      */
     public function calculateStudentTimes(Timetable $timetable, string $teacherTimezone, ?string $studentTimezone, int $adjustmentHours = 0): void
     {
+        // Check if using per-day times - if so, use first day's times for student time calculation
+        $dayTimes = $timetable->day_times;
+        $usePerDayTimes = !empty($dayTimes) && is_array($dayTimes);
+
+        if ($usePerDayTimes && !empty($dayTimes)) {
+            // Use first available day's times for student time calculation
+            $firstDay = array_key_first($dayTimes);
+            $startTimeStr = $dayTimes[$firstDay]['start_time'] ?? $timetable->start_time;
+            $endTimeStr = $dayTimes[$firstDay]['end_time'] ?? $timetable->end_time;
+        } else {
+            $startTimeStr = $timetable->start_time;
+            $endTimeStr = $timetable->end_time;
+        }
+
         // Always use original class times as the base
         // Create Carbon instances with today's date to properly handle day rollover
-        $startTime = Carbon::today()->setTimeFromTimeString($timetable->start_time);
-        $endTime = Carbon::today()->setTimeFromTimeString($timetable->end_time);
+        $startTime = Carbon::today()->setTimeFromTimeString($startTimeStr);
+        $endTime = Carbon::today()->setTimeFromTimeString($endTimeStr);
 
         // Check if using manual time difference (explicitly check for true, not just truthy)
         if ($timetable->use_manual_time_diff === true && $timetable->time_difference_hours !== null) {

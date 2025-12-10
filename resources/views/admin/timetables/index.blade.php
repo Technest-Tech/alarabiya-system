@@ -2,17 +2,35 @@
     use Illuminate\Support\Str;
 
     $timetablesPayload = $timetables->map(function ($timetable) {
+        $dayTimes = $timetable->day_times ?? [];
+        $formattedDayTimes = [];
+        if (!empty($dayTimes) && is_array($dayTimes)) {
+            foreach ($dayTimes as $day => $times) {
+                $formattedDayTimes[$day] = [
+                    'start_time' => isset($times['start_time']) ? Str::of($times['start_time'])->substr(0, 5)->value() : '',
+                    'end_time' => isset($times['end_time']) ? Str::of($times['end_time'])->substr(0, 5)->value() : '',
+                ];
+            }
+        }
+        
         return [
             'id' => $timetable->id,
             'student_id' => $timetable->student_id,
             'teacher_id' => $timetable->teacher_id,
             'course_name' => $timetable->course_name,
             'timezone' => $timetable->timezone,
+            'teacher_timezone' => $timetable->teacher_timezone,
             'start_time' => Str::of($timetable->start_time)->substr(0, 5)->value(),
             'end_time' => Str::of($timetable->end_time)->substr(0, 5)->value(),
+            'day_times' => $formattedDayTimes,
+            'use_per_day_times' => !empty($formattedDayTimes),
             'start_date' => optional($timetable->start_date)->format('Y-m-d'),
             'end_date' => optional($timetable->end_date)->format('Y-m-d'),
             'days_of_week' => $timetable->days_of_week ?? [],
+            'time_difference_hours' => $timetable->time_difference_hours,
+            'use_manual_time_diff' => $timetable->use_manual_time_diff ?? false,
+            'student_time_from' => $timetable->student_time_from,
+            'student_time_to' => $timetable->student_time_to,
             'update_url' => route('timetables.update', $timetable),
         ];
     });
@@ -346,6 +364,7 @@
                     <template x-if="isEdit">
                         <input type="hidden" name="_method" value="PUT">
                     </template>
+                    <input type="hidden" name="use_per_day_times" :value="form.use_per_day_times ? '1' : '0'">
 
                     <div class="grid gap-5 md:grid-cols-2">
                         <div class="flex flex-col">
@@ -484,26 +503,60 @@
                         </div>
 
                         <div class="flex flex-col">
-                            <label class="mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">Start time</label>
-                            <input
-                                type="time"
-                                name="start_time"
-                                x-model="form.start_time"
-                                class="rounded-xl border border-gray-300 px-3 py-2 text-sm text-gray-900 shadow-sm transition focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-200"
-                                required
-                            />
+                            <label class="mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">Time Mode</label>
+                            <div class="flex gap-4">
+                                <label class="flex items-center cursor-pointer">
+                                    <input
+                                        type="radio"
+                                        name="use_per_day_times"
+                                        :value="false"
+                                        x-model="form.use_per_day_times"
+                                        @change="handleTimeModeChange()"
+                                        class="mr-2"
+                                    />
+                                    <span class="text-sm text-gray-700 dark:text-gray-300">Same time for all days</span>
+                                </label>
+                                <label class="flex items-center cursor-pointer">
+                                    <input
+                                        type="radio"
+                                        name="use_per_day_times"
+                                        :value="true"
+                                        x-model="form.use_per_day_times"
+                                        @change="handleTimeModeChange()"
+                                        class="mr-2"
+                                    />
+                                    <span class="text-sm text-gray-700 dark:text-gray-300">Different time per day</span>
+                                </label>
+                            </div>
                         </div>
 
-                        <div class="flex flex-col">
-                            <label class="mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">End time</label>
-                            <input
-                                type="time"
-                                name="end_time"
-                                x-model="form.end_time"
-                                class="rounded-xl border border-gray-300 px-3 py-2 text-sm text-gray-900 shadow-sm transition focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-200"
-                                required
-                            />
-                        </div>
+                        <template x-if="!form.use_per_day_times">
+                            <div class="flex flex-col">
+                                <label class="mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">Start time</label>
+                                <input
+                                    type="time"
+                                    name="start_time"
+                                    x-model="form.start_time"
+                                    @input="updateStudentTimeCalculation()"
+                                    class="rounded-xl border border-gray-300 px-3 py-2 text-sm text-gray-900 shadow-sm transition focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-200"
+                                    :required="!form.use_per_day_times"
+                                />
+                            </div>
+                        </template>
+
+                        <template x-if="!form.use_per_day_times">
+                            <div class="flex flex-col">
+                                <label class="mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">End time</label>
+                                <input
+                                    type="time"
+                                    name="end_time"
+                                    x-model="form.end_time"
+                                    @input="updateStudentTimeCalculation()"
+                                    class="rounded-xl border border-gray-300 px-3 py-2 text-sm text-gray-900 shadow-sm transition focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-200"
+                                    :required="!form.use_per_day_times"
+                                />
+                            </div>
+                        </template>
                     </div>
 
                     <div class="flex flex-col">
@@ -516,6 +569,7 @@
                                         name="days_of_week[]"
                                         value="{{ $day }}"
                                         x-model="form.days_of_week"
+                                        @change="handleDaysChange()"
                                         class="peer hidden"
                                     />
                                     <span class="flex items-center justify-center rounded-xl border border-gray-300 px-3 py-2 text-sm font-semibold uppercase tracking-wide text-gray-600 transition peer-checked:border-indigo-500 peer-checked:bg-indigo-600 peer-checked:text-white dark:border-gray-600 dark:text-gray-300 dark:peer-checked:bg-indigo-500">
@@ -525,6 +579,45 @@
                             @endforeach
                         </div>
                     </div>
+
+                    <template x-if="form.use_per_day_times">
+                        <div class="flex flex-col space-y-4">
+                            <label class="text-sm font-medium text-gray-700 dark:text-gray-300">Time for each day</label>
+                            <div class="grid gap-4 md:grid-cols-2">
+                                <template x-for="day in ['sunday','monday','tuesday','wednesday','thursday','friday','saturday']" :key="day">
+                                    <template x-if="form.days_of_week.includes(day)">
+                                        <div class="flex flex-col space-y-2 p-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
+                                            <label class="text-sm font-semibold text-gray-700 dark:text-gray-300" x-text="day.charAt(0).toUpperCase() + day.slice(1)"></label>
+                                            <div class="grid grid-cols-2 gap-2">
+                                                <div class="flex flex-col">
+                                                    <label class="mb-1 text-xs text-gray-600 dark:text-gray-400">Start</label>
+                                                    <input
+                                                        type="time"
+                                                        :name="'day_times[' + day + '][start_time]'"
+                                                        x-model="form.day_times[day].start_time"
+                                                        @input="updatePerDayStudentTime(day)"
+                                                        required
+                                                        class="rounded-lg border border-gray-300 px-2 py-1.5 text-sm text-gray-900 shadow-sm transition focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-200"
+                                                    />
+                                                </div>
+                                                <div class="flex flex-col">
+                                                    <label class="mb-1 text-xs text-gray-600 dark:text-gray-400">End</label>
+                                                    <input
+                                                        type="time"
+                                                        :name="'day_times[' + day + '][end_time]'"
+                                                        x-model="form.day_times[day].end_time"
+                                                        @input="updatePerDayStudentTime(day)"
+                                                        required
+                                                        class="rounded-lg border border-gray-300 px-2 py-1.5 text-sm text-gray-900 shadow-sm transition focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-200"
+                                                    />
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </template>
+                                </template>
+                            </div>
+                        </div>
+                    </template>
 
                     <div class="flex items-center justify-end gap-3 border-t border-gray-200 pt-4 dark:border-gray-700">
                         <button
@@ -566,6 +659,8 @@
                     end_date: '',
                     start_time: '',
                     end_time: '',
+                    use_per_day_times: false,
+                    day_times: {},
                     time_difference_hours: null,
                     use_manual_time_diff: false,
                     student_time_from: '',
@@ -590,6 +685,8 @@
                         end_date: '',
                         start_time: '',
                         end_time: '',
+                        use_per_day_times: false,
+                        day_times: {},
                         time_difference_hours: null,
                         use_manual_time_diff: false,
                         student_time_from: '',
@@ -609,6 +706,17 @@
 
                     this.isEdit = true;
                     this.formAction = record.update_url;
+                    
+                    // Initialize day_times object
+                    const dayTimes = {};
+                    const allDays = ['sunday','monday','tuesday','wednesday','thursday','friday','saturday'];
+                    allDays.forEach(day => {
+                        dayTimes[day] = {
+                            start_time: record.day_times && record.day_times[day] ? record.day_times[day].start_time : '',
+                            end_time: record.day_times && record.day_times[day] ? record.day_times[day].end_time : '',
+                        };
+                    });
+
                     this.form = {
                         id: record.id,
                         student_id: String(record.student_id),
@@ -620,6 +728,8 @@
                         end_date: record.end_date,
                         start_time: record.start_time,
                         end_time: record.end_time,
+                        use_per_day_times: record.use_per_day_times || false,
+                        day_times: dayTimes,
                         time_difference_hours: record.time_difference_hours || null,
                         use_manual_time_diff: record.use_manual_time_diff || false,
                         student_time_from: record.student_time_from || '',
@@ -628,6 +738,12 @@
                         student_time_to_display: record.student_time_to ? this.formatTime(record.student_time_to) : '',
                         days_of_week: Array.isArray(record.days_of_week) ? [...record.days_of_week] : [],
                     };
+                    
+                    // Initialize day_times for selected days if using per-day times
+                    if (this.form.use_per_day_times) {
+                        this.initializeDayTimes();
+                    }
+                    
                     this.modalOpen = true;
                 },
 
@@ -679,6 +795,50 @@
                     const period = h >= 12 ? 'PM' : 'AM';
                     const hour12 = h % 12 || 12;
                     return `${hour12}:${String(m).padStart(2, '0')} ${period}`;
+                },
+
+                handleTimeModeChange() {
+                    if (this.form.use_per_day_times) {
+                        // Switching to per-day mode - initialize day_times for selected days
+                        this.initializeDayTimes();
+                    } else {
+                        // Switching to single time mode - clear day_times
+                        this.form.day_times = {};
+                    }
+                },
+
+                handleDaysChange() {
+                    if (this.form.use_per_day_times) {
+                        // Initialize times for newly selected days
+                        this.initializeDayTimes();
+                    }
+                },
+
+                initializeDayTimes() {
+                    const allDays = ['sunday','monday','tuesday','wednesday','thursday','friday','saturday'];
+                    this.form.days_of_week.forEach(day => {
+                        if (!this.form.day_times[day]) {
+                            this.form.day_times[day] = {
+                                start_time: this.form.start_time || '',
+                                end_time: this.form.end_time || '',
+                            };
+                        } else {
+                            if (!this.form.day_times[day].start_time) {
+                                this.form.day_times[day].start_time = this.form.start_time || '';
+                            }
+                            if (!this.form.day_times[day].end_time) {
+                                this.form.day_times[day].end_time = this.form.end_time || '';
+                            }
+                        }
+                    });
+                },
+
+                updatePerDayStudentTime(day) {
+                    // This could be enhanced to calculate student times per day if needed
+                    // For now, just trigger the general calculation
+                    if (this.form.day_times[day] && this.form.day_times[day].start_time && this.form.day_times[day].end_time) {
+                        // Per-day student time calculation could go here
+                    }
                 },
 
                 closeModal() {
