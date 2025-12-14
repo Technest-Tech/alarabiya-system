@@ -23,4 +23,9 @@ class SupportName extends Model
     {
         return $this->hasMany(SupportAttendance::class);
     }
+
+    public function salaries(): HasMany
+    {
+        return $this->hasMany(SupportSalary::class);
+    }
 }

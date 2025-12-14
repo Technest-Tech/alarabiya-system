@@ -27,10 +27,6 @@ class TodayLessonsController extends Controller
         ];
 
         $query = TimetableEvent::with(['student', 'teacher.user', 'timetable'])
-            ->where(function ($query) {
-                $query->whereNull('status')
-                    ->orWhereIn('status', ['scheduled', 'rescheduled']);
-            })
             ->when($filters['student_id'], fn ($q) => $q->where('student_id', $filters['student_id']))
             ->when($filters['teacher_id'], fn ($q) => $q->where('teacher_id', $filters['teacher_id']));
 

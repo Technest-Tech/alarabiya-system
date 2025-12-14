@@ -23,6 +23,7 @@
                             <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Student</th>
                             <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Teacher</th>
                             <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Package</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Currency</th>
                             <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Hours</th>
                             <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status</th>
                             <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Actions</th>
@@ -52,8 +53,30 @@
                                 <td class="px-6 py-4 whitespace-nowrap">
                                     <div class="text-sm text-gray-900 dark:text-white">{{ $student->package_hours_total }} hrs</div>
                                     @if(!Auth::user()->isSupport())
-                                        <div class="text-xs text-gray-500 dark:text-gray-400">${{ number_format($student->hourly_rate, 2) }}/hr</div>
+                                        <div class="text-xs text-gray-500 dark:text-gray-400">{{ $student->currency ?? 'USD' }} {{ number_format($student->hourly_rate, 2) }}/hr</div>
                                     @endif
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    @php
+                                        $currencies = [
+                                            'AED' => 'درهم اماراتي',
+                                            'USD' => 'دولار',
+                                            'GBP' => 'جنيه استرليني',
+                                            'INR' => 'روبية هندية',
+                                            'EGP' => 'جنيه مصري',
+                                            'EUR' => 'يورو',
+                                            'SAR' => 'ريال سعودي',
+                                            'KWD' => 'دينار كويتي',
+                                            'QAR' => 'ريال قطري',
+                                            'JPY' => 'ين ياباني',
+                                            'CAD' => 'دولار كندي',
+                                            'AUD' => 'دولار استرالي',
+                                        ];
+                                        $currencyCode = $student->currency ?? 'USD';
+                                        $currencyName = $currencies[$currencyCode] ?? $currencyCode;
+                                    @endphp
+                                    <div class="text-sm font-medium text-gray-900 dark:text-white">{{ $currencyName }}</div>
+                                    <div class="text-xs text-gray-500 dark:text-gray-400">{{ $currencyCode }}</div>
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap">
                                     <div class="flex items-center space-x-2">
@@ -105,7 +128,7 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="6" class="px-6 py-12 text-center">
+                                <td colspan="7" class="px-6 py-12 text-center">
                                     <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
                                     </svg>

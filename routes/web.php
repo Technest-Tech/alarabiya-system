@@ -15,6 +15,7 @@ use App\Http\Controllers\Admin\TimezoneAdjustmentController as AdminTimezoneAdju
 use App\Http\Controllers\Admin\SupportAttendanceController as AdminSupportAttendanceController;
 use App\Http\Controllers\Admin\PackageNotificationsController as AdminPackageNotificationsController;
 use App\Http\Controllers\Admin\SettingsController as AdminSettingsController;
+use App\Http\Controllers\Admin\FinancialOverviewController as AdminFinancialOverviewController;
 use App\Http\Controllers\Teacher\DashboardController as TeacherDashboardController;
 use App\Http\Controllers\Teacher\LessonController as TeacherLessonController;
 use Illuminate\Support\Facades\Route;
@@ -147,6 +148,15 @@ Route::middleware(['auth','role:admin|accountant'])->prefix('admin')->group(func
     Route::post('teacher-salaries/apply-exchange-rate', [AdminTeacherSalaryController::class, 'applyExchangeRate'])->name('admin.teacher-salaries.apply-exchange-rate');
     Route::patch('teacher-salaries/{salary}/mark-paid', [AdminTeacherSalaryController::class, 'markPaid'])->name('admin.teacher-salaries.markPaid');
     Route::patch('teacher-salaries/{salary}/mark-unpaid', [AdminTeacherSalaryController::class, 'markUnpaid'])->name('admin.teacher-salaries.markUnpaid');
+    
+    // Financial Overview
+    Route::get('financials', [AdminFinancialOverviewController::class, 'index'])->name('admin.financials.index');
+    Route::post('financials/support-salary', [AdminFinancialOverviewController::class, 'storeSupportSalary'])->name('admin.financials.support-salary.store');
+    Route::post('financials/accountant-salary', [AdminFinancialOverviewController::class, 'storeAccountantSalary'])->name('admin.financials.accountant-salary.store');
+    Route::patch('financials/support-salary/{salary}/status', [AdminFinancialOverviewController::class, 'updateSupportSalaryStatus'])->name('admin.financials.support-salary.status');
+    Route::patch('financials/accountant-salary/{salary}/status', [AdminFinancialOverviewController::class, 'updateAccountantSalaryStatus'])->name('admin.financials.accountant-salary.status');
+    Route::delete('financials/support-salary/{salary}', [AdminFinancialOverviewController::class, 'deleteSupportSalary'])->name('admin.financials.support-salary.delete');
+    Route::delete('financials/accountant-salary/{salary}', [AdminFinancialOverviewController::class, 'deleteAccountantSalary'])->name('admin.financials.accountant-salary.delete');
 });
 
 // Teacher routes

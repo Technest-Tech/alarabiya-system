@@ -108,26 +108,42 @@
                             @enderror
                         </div>
 
-                        @if(!Auth::user()->isSupport())
                         <div>
-                            <label for="hourly_rate" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                Hourly Rate ($) <span class="text-red-500">*</span>
+                            <label for="currency" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                Currency <span class="text-red-500">*</span>
                             </label>
-                            <input 
-                                type="number" 
-                                name="hourly_rate" 
-                                id="hourly_rate"
-                                step="0.01" 
-                                min="0" 
-                                value="{{ old('hourly_rate', $student->hourly_rate) }}" 
+                            <select 
+                                name="currency" 
+                                id="currency"
                                 required
                                 class="block w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-shadow"
                             >
-                            @error('hourly_rate')
+                                @php
+                                    $currencies = [
+                                        'AED' => 'درهم اماراتي (AED)',
+                                        'USD' => 'دولار (USD)',
+                                        'GBP' => 'جنيه استرليني (GBP)',
+                                        'INR' => 'روبية هندية (INR)',
+                                        'EGP' => 'الجنيه المصري (EGP)',
+                                        'EUR' => 'يورو (EUR)',
+                                        'SAR' => 'ريال سعودي (SAR)',
+                                        'KWD' => 'دينار كويتي (KWD)',
+                                        'QAR' => 'ريال قطري (QAR)',
+                                        'JPY' => 'ين ياباني (JPY)',
+                                        'CAD' => 'دولار كندي (CAD)',
+                                        'AUD' => 'دولار استرالي (AUD)',
+                                    ];
+                                @endphp
+                                @foreach($currencies as $code => $label)
+                                    <option value="{{ $code }}" {{ old('currency', $student->currency ?? 'USD') === $code ? 'selected' : '' }}>
+                                        {{ $label }}
+                                    </option>
+                                @endforeach
+                            </select>
+                            @error('currency')
                                 <p class="mt-1 text-sm text-red-600 dark:text-red-400">{{ $message }}</p>
                             @enderror
                         </div>
-                        @endif
 
                         <div>
                             <label for="status" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -149,6 +165,29 @@
                                 <p class="mt-1 text-sm text-red-600 dark:text-red-400">{{ $message }}</p>
                             @enderror
                         </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+                        @if(!Auth::user()->isSupport())
+                        <div>
+                            <label for="hourly_rate" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                Hourly Rate <span class="text-red-500">*</span>
+                            </label>
+                            <input 
+                                type="number" 
+                                name="hourly_rate" 
+                                id="hourly_rate"
+                                step="0.01" 
+                                min="0" 
+                                value="{{ old('hourly_rate', $student->hourly_rate) }}" 
+                                required
+                                class="block w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-shadow"
+                            >
+                            @error('hourly_rate')
+                                <p class="mt-1 text-sm text-red-600 dark:text-red-400">{{ $message }}</p>
+                            @enderror
+                        </div>
+                        @endif
                     </div>
 
                     <div>
@@ -188,7 +227,7 @@
                         </div>
                         <div>
                             <span class="text-indigo-600 dark:text-indigo-400">Total Cost:</span>
-                            <span class="ml-2 font-semibold text-indigo-900 dark:text-indigo-100">${{ number_format($student->package_hours_total * $student->hourly_rate, 2) }}</span>
+                            <span class="ml-2 font-semibold text-indigo-900 dark:text-indigo-100">{{ $student->currency ?? 'USD' }} {{ number_format($student->package_hours_total * $student->hourly_rate, 2) }}</span>
                         </div>
                     </div>
                 </div>

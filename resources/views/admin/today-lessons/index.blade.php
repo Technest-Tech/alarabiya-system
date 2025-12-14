@@ -106,7 +106,12 @@
                     </thead>
                     <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                         @forelse($events as $event)
-                            <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+                            <tr class="transition-colors
+                                @if($event['status'] === 'cancelled') bg-red-50/50 dark:bg-red-900/10 hover:bg-red-100/50 dark:hover:bg-red-900/20
+                                @elseif($event['status'] === 'absent') bg-orange-50/50 dark:bg-orange-900/10 hover:bg-orange-100/50 dark:hover:bg-orange-900/20
+                                @elseif($event['status'] === 'rescheduled') bg-yellow-50/50 dark:bg-yellow-900/10 hover:bg-yellow-100/50 dark:hover:bg-yellow-900/20
+                                @else hover:bg-gray-50 dark:hover:bg-gray-700/50
+                                @endif">
                                 <td class="px-6 py-4 whitespace-nowrap">
                                     <div class="text-sm font-medium text-gray-900 dark:text-white">
                                         {{ $event['start_at']->format('M d, Y') }}
@@ -140,6 +145,7 @@
                                         @if($event['status'] === 'scheduled') bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300
                                         @elseif($event['status'] === 'cancelled') bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-300
                                         @elseif($event['status'] === 'rescheduled') bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-300
+                                        @elseif($event['status'] === 'absent') bg-orange-100 text-orange-800 dark:bg-orange-900/20 dark:text-orange-300
                                         @else bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300
                                         @endif">
                                         {{ ucfirst($event['status']) }}

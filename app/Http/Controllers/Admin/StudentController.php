@@ -38,6 +38,7 @@ class StudentController extends Controller
             'whatsapp_number' => ['required', new \App\Rules\PhoneNumberFormat($request->country_code)],
             'package_hours_total' => ['required','integer','min:1'],
             'payment_method' => ['required','in:cash,bank_transfer,credit_card,paypal,other'],
+            'currency' => ['required','string','size:3','in:AED,USD,GBP,INR,EGP,EUR,SAR,KWD,QAR,JPY,CAD,AUD'],
             'assigned_teacher_id' => ['nullable','exists:teachers,id'],
         ];
         
@@ -85,6 +86,7 @@ class StudentController extends Controller
             'whatsapp_number' => ['required', new \App\Rules\PhoneNumberFormat($request->country_code)],
             'package_hours_total' => ['required','integer','min:1'],
             'payment_method' => ['required','in:cash,bank_transfer,credit_card,paypal,other'],
+            'currency' => ['required','string','size:3','in:AED,USD,GBP,INR,EGP,EUR,SAR,KWD,QAR,JPY,CAD,AUD'],
             'assigned_teacher_id' => ['nullable','exists:teachers,id'],
             'status' => ['required','in:active,disabled'],
         ];

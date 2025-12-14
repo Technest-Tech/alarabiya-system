@@ -14,7 +14,7 @@ class Student extends Model
     protected $fillable = [
         'name', 'whatsapp_number', 'country_code', 'package_hours_total',
         'hours_taken_cached', 'status', 'payment_method', 'hourly_rate',
-        'assigned_teacher_id', 'current_package_id',
+        'currency', 'assigned_teacher_id', 'current_package_id',
     ];
 
     public function teacher(): BelongsTo
