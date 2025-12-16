@@ -28,8 +28,8 @@ class StoreTimetableRequest extends FormRequest
             'start_time' => ['nullable', 'date_format:H:i'],
             'end_time' => ['nullable', 'date_format:H:i'],
             'day_times' => ['nullable', 'array'],
-            'day_times.*.start_time' => ['required_with:day_times', 'date_format:H:i'],
-            'day_times.*.end_time' => ['required_with:day_times', 'date_format:H:i'],
+            'day_times.*.start_time' => ['nullable', 'date_format:H:i'],
+            'day_times.*.end_time' => ['nullable', 'date_format:H:i'],
             'start_date' => ['required', 'date'],
             'end_date' => ['required', 'date', 'after_or_equal:start_date'],
             'days_of_week' => ['required', 'array', 'min:1'],
@@ -60,26 +60,34 @@ class StoreTimetableRequest extends FormRequest
                 // Check that all selected days have times
                 foreach ($daysOfWeek as $day) {
                     if (!isset($dayTimes[$day])) {
-                        $validator->errors()->add("day_times.{$day}", "Times are required for {$day}.");
+                        $validator->errors()->add("day_times.{$day}.start_time", "Start time is required for {$day}.");
+                        $validator->errors()->add("day_times.{$day}.end_time", "End time is required for {$day}.");
                         continue;
                     }
 
                     $dayStart = $dayTimes[$day]['start_time'] ?? null;
                     $dayEnd = $dayTimes[$day]['end_time'] ?? null;
 
-                    if (!$dayStart || !$dayEnd) {
-                        continue;
+                    if (!$dayStart || trim($dayStart) === '') {
+                        $validator->errors()->add("day_times.{$day}.start_time", "Start time is required for {$day}.");
+                    }
+                    
+                    if (!$dayEnd || trim($dayEnd) === '') {
+                        $validator->errors()->add("day_times.{$day}.end_time", "End time is required for {$day}.");
                     }
 
-                    try {
-                        $startTime = Carbon::createFromFormat('H:i', $dayStart);
-                        $endTime = Carbon::createFromFormat('H:i', $dayEnd);
-                    } catch (\InvalidArgumentException) {
-                        continue;
-                    }
-
-                    if ($endTime->equalTo($startTime) || $endTime->lessThan($startTime)) {
-                        $validator->errors()->add("day_times.{$day}.end_time", "End time must be after the start time for {$day}.");
+                    // Only validate time comparison if both times are provided
+                    if ($dayStart && $dayEnd && trim($dayStart) !== '' && trim($dayEnd) !== '') {
+                        try {
+                            $startTime = Carbon::createFromFormat('H:i', $dayStart);
+                            $endTime = Carbon::createFromFormat('H:i', $dayEnd);
+                            
+                            if ($endTime->equalTo($startTime) || $endTime->lessThan($startTime)) {
+                                $validator->errors()->add("day_times.{$day}.end_time", "End time must be after the start time for {$day}.");
+                            }
+                        } catch (\InvalidArgumentException) {
+                            // Invalid time format - already handled by date_format rule
+                        }
                     }
                 }
             } else {
@@ -140,15 +148,21 @@ class StoreTimetableRequest extends FormRequest
         $usePerDayTimes = $this->boolean('use_per_day_times', false);
 
         if ($usePerDayTimes) {
-            // Handle per-day times
+            // Handle per-day times - only process selected days
             $dayTimes = $this->input('day_times', []);
+            $daysOfWeek = $this->input('days_of_week', []);
             $formattedDayTimes = [];
             
-            foreach ($dayTimes as $day => $times) {
-                if (isset($times['start_time']) && isset($times['end_time'])) {
+            // Only process times for selected days
+            foreach ($daysOfWeek as $day) {
+                if (isset($dayTimes[$day]) && 
+                    isset($dayTimes[$day]['start_time']) && 
+                    isset($dayTimes[$day]['end_time']) &&
+                    trim($dayTimes[$day]['start_time']) !== '' &&
+                    trim($dayTimes[$day]['end_time']) !== '') {
                     $formattedDayTimes[$day] = [
-                        'start_time' => Carbon::createFromFormat('H:i', $times['start_time'])->format('H:i:s'),
-                        'end_time' => Carbon::createFromFormat('H:i', $times['end_time'])->format('H:i:s'),
+                        'start_time' => Carbon::createFromFormat('H:i', $dayTimes[$day]['start_time'])->format('H:i:s'),
+                        'end_time' => Carbon::createFromFormat('H:i', $dayTimes[$day]['end_time'])->format('H:i:s'),
                     ];
                 }
             }
