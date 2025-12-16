@@ -191,4 +191,14 @@ class TodayLessonsController extends Controller
         return redirect()->route('today-lessons.index')
             ->with('status', 'Lesson marked as absent.');
     }
+
+    public function attended(TimetableEvent $event): RedirectResponse
+    {
+        $event->update([
+            'status' => 'attended',
+        ]);
+
+        return redirect()->route('today-lessons.index')
+            ->with('status', 'Lesson marked as attended.');
+    }
 }

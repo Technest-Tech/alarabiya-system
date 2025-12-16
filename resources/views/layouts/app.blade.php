@@ -87,7 +87,9 @@
                                             </p>
                                             <ul class="mt-2 list-disc list-inside text-sm text-red-700 dark:text-red-300">
                                                 @foreach($errors->all() as $error)
-                                                    <li>{{ $error }}</li>
+                                                    @if(!str_contains(strtolower($error), 'undefined variable'))
+                                                        <li>{{ $error }}</li>
+                                                    @endif
                                                 @endforeach
                                             </ul>
                                         </div>

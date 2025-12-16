@@ -82,6 +82,7 @@ Route::middleware(['auth','role:admin'])->prefix('admin')->group(function () {
     Route::post('timetables/bulk-deactivate', [AdminTimetableController::class, 'bulkDeactivate'])->name('timetables.bulk-deactivate');
     Route::get('timetables/calendar', [AdminTimetableCalendarController::class, 'index'])->name('timetables.calendar');
     Route::get('timetables/events', [AdminTimetableCalendarController::class, 'events'])->name('timetables.events.index');
+    Route::post('timetables/events', [AdminTimetableCalendarController::class, 'storeEvent'])->name('timetables.events.store');
     Route::put('timetables/events/{event}', [AdminTimetableCalendarController::class, 'updateEvent'])->name('timetables.events.update');
     Route::delete('timetables/events/{event}', [AdminTimetableCalendarController::class, 'destroyEvent'])->name('timetables.events.destroy');
     Route::get('timetables/export', [AdminTimetableCalendarController::class, 'export'])->name('timetables.export');
@@ -89,6 +90,7 @@ Route::middleware(['auth','role:admin'])->prefix('admin')->group(function () {
     Route::post('today-lessons/{event}/reschedule', [AdminTodayLessonsController::class, 'reschedule'])->name('today-lessons.reschedule');
     Route::post('today-lessons/{event}/cancel', [AdminTodayLessonsController::class, 'cancel'])->name('today-lessons.cancel');
     Route::post('today-lessons/{event}/absent', [AdminTodayLessonsController::class, 'absent'])->name('today-lessons.absent');
+    Route::post('today-lessons/{event}/attended', [AdminTodayLessonsController::class, 'attended'])->name('today-lessons.attended');
     Route::resource('timezone-adjustments', AdminTimezoneAdjustmentController::class)->only(['index', 'store']);
     Route::resource('support-attendances', AdminSupportAttendanceController::class)->only(['index', 'store', 'update', 'destroy']);
     Route::patch('support-attendances/{supportAttendance}/finish-time', [AdminSupportAttendanceController::class, 'updateFinishTime'])->name('support-attendances.finish-time');
@@ -120,6 +122,7 @@ Route::middleware(['auth','role:admin|support'])->prefix('admin')->group(functio
     Route::post('timetables/bulk-deactivate', [AdminTimetableController::class, 'bulkDeactivate'])->name('timetables.bulk-deactivate');
     Route::get('timetables/calendar', [AdminTimetableCalendarController::class, 'index'])->name('timetables.calendar');
     Route::get('timetables/events', [AdminTimetableCalendarController::class, 'events'])->name('timetables.events.index');
+    Route::post('timetables/events', [AdminTimetableCalendarController::class, 'storeEvent'])->name('timetables.events.store');
     Route::put('timetables/events/{event}', [AdminTimetableCalendarController::class, 'updateEvent'])->name('timetables.events.update');
     Route::delete('timetables/events/{event}', [AdminTimetableCalendarController::class, 'destroyEvent'])->name('timetables.events.destroy');
     Route::get('timetables/export', [AdminTimetableCalendarController::class, 'export'])->name('timetables.export');
@@ -127,6 +130,7 @@ Route::middleware(['auth','role:admin|support'])->prefix('admin')->group(functio
     Route::post('today-lessons/{event}/reschedule', [AdminTodayLessonsController::class, 'reschedule'])->name('today-lessons.reschedule');
     Route::post('today-lessons/{event}/cancel', [AdminTodayLessonsController::class, 'cancel'])->name('today-lessons.cancel');
     Route::post('today-lessons/{event}/absent', [AdminTodayLessonsController::class, 'absent'])->name('today-lessons.absent');
+    Route::post('today-lessons/{event}/attended', [AdminTodayLessonsController::class, 'attended'])->name('today-lessons.attended');
     Route::resource('timezone-adjustments', AdminTimezoneAdjustmentController::class)->only(['index', 'store']);
     Route::resource('support-attendances', AdminSupportAttendanceController::class)->only(['index', 'store', 'update', 'destroy']);
     Route::patch('support-attendances/{supportAttendance}/finish-time', [AdminSupportAttendanceController::class, 'updateFinishTime'])->name('support-attendances.finish-time');

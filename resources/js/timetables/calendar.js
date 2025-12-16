@@ -72,6 +72,18 @@ export function initTimetableCalendar(element) {
                     failureCallback(error);
                 });
         },
+        dateClick(info) {
+            window.dispatchEvent(
+                new CustomEvent('timetable:date-click', {
+                    detail: {
+                        date: info.dateStr,
+                        dateTime: info.date,
+                        allDay: info.allDay,
+                        view: info.view.type,
+                    },
+                })
+            );
+        },
         eventClick(info) {
             window.dispatchEvent(
                 new CustomEvent('timetable:event-click', {
