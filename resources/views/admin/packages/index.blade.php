@@ -66,7 +66,7 @@
                         </div>
                         <div class="p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
                             <p class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Total Cost</p>
-                            <p class="mt-1 text-xl font-bold text-yellow-600 dark:text-yellow-400">${{ number_format($packageHours * $student->hourly_rate, 2) }}</p>
+                            <p class="mt-1 text-xl font-bold text-yellow-600 dark:text-yellow-400">{{ $student->currency ?? 'USD' }} {{ number_format($packageHours * $student->hourly_rate, 2) }}</p>
                         </div>
                     </div>
 

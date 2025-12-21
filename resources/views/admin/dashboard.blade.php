@@ -55,13 +55,21 @@
             </div>
 
             @if(!Auth::user()->isSupport())
-            <!-- Total Revenue Card -->
+            @php
+                $revenueByCurrency = \App\Models\Student::get()->groupBy(function($student) {
+                    return $student->currency ?? 'USD';
+                })->map(function ($students) {
+                    return $students->sum(fn($s) => $s->package_hours_total * $s->hourly_rate);
+                })->sortKeys();
+            @endphp
+            @foreach($revenueByCurrency as $currency => $total)
+            <!-- Revenue Card for {{ $currency }} -->
             <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 hover:shadow-md transition-shadow">
                 <div class="flex items-center justify-between">
                     <div>
-                        <p class="text-sm font-medium text-gray-600 dark:text-gray-400">Total Revenue</p>
-                        <p class="text-3xl font-bold text-gray-900 dark:text-white mt-2">
-                            ${{ number_format(\App\Models\Student::get()->sum(fn($s) => $s->package_hours_total * $s->hourly_rate), 2) }}
+                        <p class="text-sm font-medium text-gray-600 dark:text-gray-400">Total Revenue ({{ $currency }})</p>
+                        <p class="text-xl font-bold text-gray-900 dark:text-white mt-2">
+                            {{ $currency }} {{ number_format($total, 2) }}
                         </p>
                         <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">From all packages</p>
                     </div>
@@ -72,6 +80,7 @@
                     </div>
                 </div>
             </div>
+            @endforeach
             @endif
         </div>
 

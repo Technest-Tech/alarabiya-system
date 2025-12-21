@@ -2,7 +2,18 @@
     <div class="flex h-16 items-center justify-between px-4 sm:px-6 lg:px-8">
         <!-- Left: Mobile menu button + Page title -->
         <div class="flex items-center space-x-4">
-            <button @click="document.dispatchEvent(new CustomEvent('toggle-sidebar'))" class="lg:hidden text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
+            <button 
+                x-data
+                @click="
+                    if ($store && $store.sidebar) {
+                        $store.sidebar.toggle();
+                    } else if (typeof window.toggleSidebar === 'function') {
+                        window.toggleSidebar();
+                    }
+                " 
+                class="lg:hidden text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+                aria-label="Toggle sidebar"
+            >
                 <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
                 </svg>

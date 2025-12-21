@@ -21,21 +21,9 @@
 
             <!-- Mobile overlay -->
             <div 
-                x-data="{ 
-                    show: false,
-                    init() {
-                        document.addEventListener('toggle-sidebar', () => {
-                            setTimeout(() => {
-                                const sidebar = document.querySelector('aside')
-                                if (sidebar && window.innerWidth < 1024) {
-                                    this.show = sidebar.classList.contains('translate-x-0')
-                                }
-                            }, 100)
-                        })
-                    }
-                }"
-                x-show="show"
-                @click="document.dispatchEvent(new CustomEvent('toggle-sidebar'))"
+                x-data
+                x-show="$store.sidebar.open && $store.sidebar.isMobile"
+                @click="$store.sidebar.toggle()"
                 x-transition:enter="transition-opacity ease-linear duration-300"
                 x-transition:enter-start="opacity-0"
                 x-transition:enter-end="opacity-100"

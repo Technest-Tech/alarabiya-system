@@ -37,7 +37,7 @@
                     </div>
 
                     <!-- Stats Grid -->
-                    <div class="grid grid-cols-2 gap-3 mb-4">
+                    <div class="grid grid-cols-2 md:grid-cols-3 gap-3 mb-4">
                         <div class="p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
                             <p class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Package</p>
                             <p class="mt-1 text-xl font-bold text-gray-900 dark:text-white">{{ $package->package_hours }} hrs</p>
@@ -47,6 +47,10 @@
                             <p class="mt-1 text-xl font-bold text-indigo-600 dark:text-indigo-400">
                                 {{ number_format($package->hours_used_decimal, 2) }} hrs
                             </p>
+                        </div>
+                        <div class="p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                            <p class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Total Cost</p>
+                            <p class="mt-1 text-xl font-bold text-yellow-600 dark:text-yellow-400">{{ $package->student->currency ?? 'USD' }} {{ number_format($package->package_hours * $package->student->hourly_rate, 2) }}</p>
                         </div>
                     </div>
 

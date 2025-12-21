@@ -7,28 +7,50 @@
                     Track academy income and expenses by period.
                 </p>
             </div>
-            <form method="GET" class="flex items-center gap-3 flex-wrap">
-                <div>
-                    <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-1">USD to EGP Rate</label>
-                    <input type="number" name="conversion_rate" step="0.01" min="0" value="{{ $conversionRate }}"
-                           placeholder="e.g., 50.5"
-                           class="w-32 rounded-lg border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-white text-sm px-3 py-2">
+            <form method="GET" class="space-y-4">
+                <div class="flex items-center gap-3 flex-wrap">
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-1">From Date</label>
+                        <input type="date" name="from_date" value="{{ $fromDate }}"
+                               class="rounded-lg border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-white text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-1">To Date</label>
+                        <input type="date" name="to_date" value="{{ $toDate }}"
+                               class="rounded-lg border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-white text-sm">
+                    </div>
+                    <div class="flex items-end">
+                        <button type="submit"
+                                class="inline-flex items-center px-4 py-2 bg-indigo-600 text-white text-sm font-semibold rounded-lg shadow-sm hover:bg-indigo-700 transition-colors">
+                            Apply Filter
+                        </button>
+                    </div>
                 </div>
-                <div>
-                    <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-1">From Date</label>
-                    <input type="date" name="from_date" value="{{ $fromDate }}"
-                           class="rounded-lg border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-white text-sm">
-                </div>
-                <div>
-                    <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-1">To Date</label>
-                    <input type="date" name="to_date" value="{{ $toDate }}"
-                           class="rounded-lg border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-white text-sm">
-                </div>
-                <div class="flex items-end">
-                    <button type="submit"
-                            class="inline-flex items-center px-4 py-2 bg-indigo-600 text-white text-sm font-semibold rounded-lg shadow-sm hover:bg-indigo-700 transition-colors">
-                        Apply Filter
-                    </button>
+                
+                <!-- Currency Conversion Rates -->
+                <div class="bg-gray-50 dark:bg-gray-900/50 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
+                    <p class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-3">Currency to EGP Conversion Rates</p>
+                    <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
+                        @foreach($availableCurrencies as $currency)
+                            @if($currency !== 'EGP')
+                                <div>
+                                    <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+                                        {{ $currency }} → EGP
+                                    </label>
+                                    <input type="number" 
+                                           name="{{ strtolower($currency) }}_to_egp_rate" 
+                                           step="0.01" 
+                                           min="0" 
+                                           value="{{ $conversionRates[$currency] ?? '' }}"
+                                           placeholder="Rate"
+                                           class="w-full rounded-lg border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-white text-sm px-3 py-2">
+                                </div>
+                            @endif
+                        @endforeach
+                    </div>
+                    <p class="mt-2 text-xs text-gray-500 dark:text-gray-400 italic">
+                        Enter the conversion rate for each currency (e.g., 1 USD = 50.5 EGP means enter 50.5)
+                    </p>
                 </div>
             </form>
         </div>
@@ -80,8 +102,17 @@
                 <p class="mt-2 text-xs text-gray-500 dark:text-gray-400">
                     {{ $totalIncome > 0 ? 'of total income' : 'No income data' }}
                 </p>
-                @if($conversionRate > 1)
-                    <p class="mt-1 text-xs text-gray-400 dark:text-gray-500 italic">Rate: 1 USD = {{ number_format($conversionRate, 2) }} EGP</p>
+                @php
+                    $activeRates = collect($conversionRates)->filter(function($rate, $curr) {
+                        return $curr !== 'EGP' && $rate > 0;
+                    })->map(function($rate, $curr) {
+                        return '1 ' . $curr . ' = ' . number_format($rate, 2) . ' EGP';
+                    })->implode(', ');
+                @endphp
+                @if($activeRates)
+                    <p class="mt-1 text-xs text-gray-400 dark:text-gray-500 italic">
+                        {{ $activeRates }}
+                    </p>
                 @endif
             </div>
         </div>
@@ -102,7 +133,7 @@
                                     <span class="text-sm font-semibold text-green-600 dark:text-green-400">
                                         {{ $currency }} {{ number_format($incomeByCurrency[$currency]['total'] ?? 0, 2) }}
                                     </span>
-                                    @if($currency === 'USD' && isset($incomeByCurrency[$currency]['total_egp']))
+                                    @if(isset($incomeByCurrency[$currency]['total_egp']) && $incomeByCurrency[$currency]['total_egp'] > 0)
                                         <br><span class="text-xs text-gray-500 dark:text-gray-400">
                                             (EGP {{ number_format($incomeByCurrency[$currency]['total_egp'], 2) }})
                                         </span>
@@ -115,7 +146,7 @@
                                     <span class="text-sm font-semibold text-red-600 dark:text-red-400">
                                         {{ $currency }} {{ number_format($expensesByCurrency[$currency]['original'] ?? 0, 2) }}
                                     </span>
-                                    @if($currency === 'USD' && isset($expensesByCurrency[$currency]['egp']))
+                                    @if(isset($expensesByCurrency[$currency]['egp']) && $expensesByCurrency[$currency]['egp'] > 0)
                                         <br><span class="text-xs text-gray-500 dark:text-gray-400">
                                             (EGP {{ number_format($expensesByCurrency[$currency]['egp'], 2) }})
                                         </span>
@@ -128,10 +159,10 @@
                                     <span class="text-lg font-bold {{ ($netByCurrency[$currency] ?? 0) >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400' }}">
                                         {{ $currency }} {{ number_format($netByCurrency[$currency] ?? 0, 2) }}
                                     </span>
-                                    @if($currency === 'USD')
-                                        @php
-                                            $netEGP = ($incomeByCurrency[$currency]['total_egp'] ?? 0) - ($expensesByCurrency[$currency]['egp'] ?? 0);
-                                        @endphp
+                                    @php
+                                        $netEGP = ($incomeByCurrency[$currency]['total_egp'] ?? 0) - ($expensesByCurrency[$currency]['egp'] ?? 0);
+                                    @endphp
+                                    @if($netEGP != 0)
                                         <br><span class="text-xs text-gray-500 dark:text-gray-400">
                                             (EGP {{ number_format($netEGP, 2) }})
                                         </span>
@@ -165,19 +196,19 @@
                                 <td class="px-6 py-4 text-sm font-medium text-gray-900 dark:text-white">{{ $currency }}</td>
                                 <td class="px-6 py-4 text-sm text-gray-900 dark:text-white">
                                     {{ $currency }} {{ number_format($data['total'], 2) }}
-                                    @if($currency === 'USD' && isset($data['total_egp']))
+                                    @if(isset($data['total_egp']) && $data['total_egp'] > 0)
                                         <br><span class="text-xs text-gray-500 dark:text-gray-400">(EGP {{ number_format($data['total_egp'], 2) }})</span>
                                     @endif
                                 </td>
                                 <td class="px-6 py-4 text-sm text-green-600 dark:text-green-400">
                                     {{ $currency }} {{ number_format($data['paid'], 2) }}
-                                    @if($currency === 'USD' && isset($data['paid_egp']))
+                                    @if(isset($data['paid_egp']) && $data['paid_egp'] > 0)
                                         <br><span class="text-xs text-gray-500 dark:text-gray-400">(EGP {{ number_format($data['paid_egp'], 2) }})</span>
                                     @endif
                                 </td>
                                 <td class="px-6 py-4 text-sm text-red-600 dark:text-red-400">
                                     {{ $currency }} {{ number_format($data['unpaid'], 2) }}
-                                    @if($currency === 'USD' && isset($data['unpaid_egp']))
+                                    @if(isset($data['unpaid_egp']) && $data['unpaid_egp'] > 0)
                                         <br><span class="text-xs text-gray-500 dark:text-gray-400">(EGP {{ number_format($data['unpaid_egp'], 2) }})</span>
                                     @endif
                                 </td>
@@ -262,7 +293,11 @@
                         <input type="hidden" name="month" value="{{ $start->format('Y-m') }}">
                         <input type="hidden" name="from_date" value="{{ $fromDate }}">
                         <input type="hidden" name="to_date" value="{{ $toDate }}">
-                        <input type="hidden" name="conversion_rate" value="{{ $conversionRate }}">
+                        @foreach($availableCurrencies as $currency)
+                            @if($currency !== 'EGP' && isset($conversionRates[$currency]))
+                                <input type="hidden" name="{{ strtolower($currency) }}_to_egp_rate" value="{{ $conversionRates[$currency] }}">
+                            @endif
+                        @endforeach
                         <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
                             <div>
                                 <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-1">Support Name</label>
@@ -278,8 +313,9 @@
                                 <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-1">Currency</label>
                                 <select name="currency" required
                                         class="w-full rounded-lg border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-white text-sm">
-                                    <option value="EGP">EGP</option>
-                                    <option value="USD">USD</option>
+                                    @foreach($availableCurrencies as $currency)
+                                        <option value="{{ $currency }}">{{ $currency }}</option>
+                                    @endforeach
                                 </select>
                             </div>
                             <div>
@@ -336,7 +372,11 @@
                                                 @method('PATCH')
                                                 <input type="hidden" name="from_date" value="{{ $fromDate }}">
                                                 <input type="hidden" name="to_date" value="{{ $toDate }}">
-                                                <input type="hidden" name="conversion_rate" value="{{ $conversionRate }}">
+                                                @foreach($availableCurrencies as $currency)
+                                                    @if($currency !== 'EGP' && isset($conversionRates[$currency]))
+                                                        <input type="hidden" name="{{ strtolower($currency) }}_to_egp_rate" value="{{ $conversionRates[$currency] }}">
+                                                    @endif
+                                                @endforeach
                                                 <input type="hidden" name="status" value="{{ $salary->status === 'paid' ? 'pending' : 'paid' }}">
                                                 <button type="submit" 
                                                         class="inline-flex items-center px-3 py-1.5 {{ $salary->status === 'paid' ? 'bg-yellow-600' : 'bg-green-600' }} text-white rounded-lg text-xs font-semibold hover:{{ $salary->status === 'paid' ? 'bg-yellow-700' : 'bg-green-700' }} transition-colors">
@@ -349,7 +389,11 @@
                                                 @method('DELETE')
                                                 <input type="hidden" name="from_date" value="{{ $fromDate }}">
                                                 <input type="hidden" name="to_date" value="{{ $toDate }}">
-                                                <input type="hidden" name="conversion_rate" value="{{ $conversionRate }}">
+                                                @foreach($availableCurrencies as $currency)
+                                                    @if($currency !== 'EGP' && isset($conversionRates[$currency]))
+                                                        <input type="hidden" name="{{ strtolower($currency) }}_to_egp_rate" value="{{ $conversionRates[$currency] }}">
+                                                    @endif
+                                                @endforeach
                                                 <button type="submit" 
                                                         class="inline-flex items-center px-3 py-1.5 bg-red-600 text-white rounded-lg text-xs font-semibold hover:bg-red-700 transition-colors">
                                                     Delete
@@ -387,7 +431,11 @@
                         <input type="hidden" name="month" value="{{ $start->format('Y-m') }}">
                         <input type="hidden" name="from_date" value="{{ $fromDate }}">
                         <input type="hidden" name="to_date" value="{{ $toDate }}">
-                        <input type="hidden" name="conversion_rate" value="{{ $conversionRate }}">
+                        @foreach($availableCurrencies as $currency)
+                            @if($currency !== 'EGP' && isset($conversionRates[$currency]))
+                                <input type="hidden" name="{{ strtolower($currency) }}_to_egp_rate" value="{{ $conversionRates[$currency] }}">
+                            @endif
+                        @endforeach
                         <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
                             <div>
                                 <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-1">Accountant Name</label>
@@ -403,8 +451,9 @@
                                 <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-1">Currency</label>
                                 <select name="currency" required
                                         class="w-full rounded-lg border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-white text-sm">
-                                    <option value="EGP">EGP</option>
-                                    <option value="USD">USD</option>
+                                    @foreach($availableCurrencies as $currency)
+                                        <option value="{{ $currency }}">{{ $currency }}</option>
+                                    @endforeach
                                 </select>
                             </div>
                             <div>
@@ -461,7 +510,11 @@
                                                 @method('PATCH')
                                                 <input type="hidden" name="from_date" value="{{ $fromDate }}">
                                                 <input type="hidden" name="to_date" value="{{ $toDate }}">
-                                                <input type="hidden" name="conversion_rate" value="{{ $conversionRate }}">
+                                                @foreach($availableCurrencies as $currency)
+                                                    @if($currency !== 'EGP' && isset($conversionRates[$currency]))
+                                                        <input type="hidden" name="{{ strtolower($currency) }}_to_egp_rate" value="{{ $conversionRates[$currency] }}">
+                                                    @endif
+                                                @endforeach
                                                 <input type="hidden" name="status" value="{{ $salary->status === 'paid' ? 'pending' : 'paid' }}">
                                                 <button type="submit" 
                                                         class="inline-flex items-center px-3 py-1.5 {{ $salary->status === 'paid' ? 'bg-yellow-600' : 'bg-green-600' }} text-white rounded-lg text-xs font-semibold hover:{{ $salary->status === 'paid' ? 'bg-yellow-700' : 'bg-green-700' }} transition-colors">
@@ -474,7 +527,11 @@
                                                 @method('DELETE')
                                                 <input type="hidden" name="from_date" value="{{ $fromDate }}">
                                                 <input type="hidden" name="to_date" value="{{ $toDate }}">
-                                                <input type="hidden" name="conversion_rate" value="{{ $conversionRate }}">
+                                                @foreach($availableCurrencies as $currency)
+                                                    @if($currency !== 'EGP' && isset($conversionRates[$currency]))
+                                                        <input type="hidden" name="{{ strtolower($currency) }}_to_egp_rate" value="{{ $conversionRates[$currency] }}">
+                                                    @endif
+                                                @endforeach
                                                 <button type="submit" 
                                                         class="inline-flex items-center px-3 py-1.5 bg-red-600 text-white rounded-lg text-xs font-semibold hover:bg-red-700 transition-colors">
                                                     Delete
@@ -497,4 +554,5 @@
         </div>
     </div>
 </x-app-layout>
+
 

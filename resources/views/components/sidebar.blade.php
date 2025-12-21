@@ -1,23 +1,18 @@
 <aside 
-    x-data="{ 
-        open: false,
+    x-data="{
         init() {
-            // Desktop: always open, Mobile: closed by default
-            this.open = window.innerWidth >= 1024
-            this.$watch('open', value => {
-                if (window.innerWidth < 1024 && value) {
+            // Watch store changes
+            this.$watch('$store.sidebar.open', value => {
+                if ($store.sidebar.isMobile && value) {
                     document.body.style.overflow = 'hidden'
                 } else {
                     document.body.style.overflow = ''
                 }
             })
-            document.addEventListener('toggle-sidebar', () => {
-                this.open = !this.open
-            })
         }
     }"
     class="fixed inset-y-0 left-0 z-50 w-64 bg-gradient-to-b from-indigo-700 to-indigo-900 text-white shadow-xl transition-transform duration-300 ease-in-out"
-    :class="{ '-translate-x-full': !open && window.innerWidth < 1024, 'translate-x-0': open || window.innerWidth >= 1024 }"
+    :class="$store.sidebar.isMobile ? ($store.sidebar.open ? 'translate-x-0' : '-translate-x-full') : 'translate-x-0'"
     <!-- Logo Section -->
     <div class="flex h-16 items-center justify-between px-6 border-b border-indigo-600">
         <a href="{{ Auth::user()->canAccessAdminDashboard() ? route('admin.dashboard') : route('teacher.dashboard') }}" class="flex items-center space-x-3">
@@ -31,7 +26,18 @@
                 <p class="text-xs text-indigo-200">Management System</p>
             </div>
         </a>
-        <button @click="open = false" class="lg:hidden text-white hover:text-indigo-200">
+        <button 
+            x-data
+            @click="
+                if ($store && $store.sidebar) {
+                    $store.sidebar.toggle();
+                } else if (typeof window.toggleSidebar === 'function') {
+                    window.toggleSidebar();
+                }
+            " 
+            class="lg:hidden text-white hover:text-indigo-200 focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-indigo-700"
+            aria-label="Close sidebar"
+        >
             <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
             </svg>

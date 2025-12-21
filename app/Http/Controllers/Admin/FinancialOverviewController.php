@@ -24,13 +24,31 @@ class FinancialOverviewController extends Controller
         $fromDate = $request->get('from_date', Carbon::now()->startOfMonth()->format('Y-m-d'));
         $toDate = $request->get('to_date', Carbon::now()->endOfMonth()->format('Y-m-d'));
         
-        // Get conversion rate (from request or session, default to 1 if not set)
-        $conversionRate = $request->get('conversion_rate', session('usd_to_egp_rate', null));
-        if ($conversionRate !== null) {
-            $conversionRate = (float) $conversionRate;
-            session(['usd_to_egp_rate' => $conversionRate]);
-        } else {
-            $conversionRate = session('usd_to_egp_rate', 1);
+        // Define all available currencies
+        $availableCurrencies = ['AED', 'USD', 'GBP', 'INR', 'EGP', 'EUR', 'SAR', 'KWD', 'QAR', 'JPY', 'CAD', 'AUD'];
+        
+        // Get conversion rates for all currencies (from request or session)
+        $conversionRates = session('currency_to_egp_rates', []);
+        
+        // Update rates from request
+        foreach ($availableCurrencies as $currency) {
+            $rateKey = strtolower($currency) . '_to_egp_rate';
+            if ($request->has($rateKey)) {
+                $rate = (float) $request->get($rateKey);
+                if ($rate > 0) {
+                    $conversionRates[$currency] = $rate;
+                }
+            }
+        }
+        
+        // Save updated rates to session
+        if (!empty($conversionRates)) {
+            session(['currency_to_egp_rates' => $conversionRates]);
+        }
+        
+        // Set default rate of 1 for EGP (1 EGP = 1 EGP)
+        if (!isset($conversionRates['EGP'])) {
+            $conversionRates['EGP'] = 1;
         }
         
         $start = Carbon::parse($fromDate)->startOfDay();
@@ -136,11 +154,13 @@ class FinancialOverviewController extends Controller
         }
 
         // Helper function to convert to EGP
-        $convertToEGP = function ($amount, $currency) use ($conversionRate) {
-            if ($currency === 'USD') {
-                return $amount * $conversionRate;
+        $convertToEGP = function ($amount, $currency) use ($conversionRates) {
+            if ($currency === 'EGP') {
+                return $amount; // Already in EGP
             }
-            return $amount; // Already in EGP
+            
+            $rate = $conversionRates[$currency] ?? 1;
+            return $amount * $rate;
         };
 
         // Convert all amounts to EGP for unified statistics
@@ -238,7 +258,8 @@ class FinancialOverviewController extends Controller
             'toDate' => $toDate,
             'start' => $start,
             'end' => $end,
-            'conversionRate' => $conversionRate,
+            'conversionRates' => $conversionRates,
+            'availableCurrencies' => $availableCurrencies,
             'availableMonths' => $availableMonths,
             'incomeByCurrency' => $incomeByCurrencyConverted,
             'expensesByCurrency' => $expensesByCurrencyConverted,
@@ -274,10 +295,7 @@ class FinancialOverviewController extends Controller
             ]
         );
 
-        $redirectParams = $request->only(['from_date', 'to_date', 'month', 'conversion_rate']);
-        if (!$redirectParams['month']) {
-            unset($redirectParams['month']);
-        }
+        $redirectParams = $this->getRedirectParams($request);
 
         return redirect()->route('admin.financials.index', $redirectParams)
             ->with('status', 'Support salary saved successfully.');
@@ -301,10 +319,7 @@ class FinancialOverviewController extends Controller
             ]
         );
 
-        $redirectParams = $request->only(['from_date', 'to_date', 'month', 'conversion_rate']);
-        if (!$redirectParams['month']) {
-            unset($redirectParams['month']);
-        }
+        $redirectParams = $this->getRedirectParams($request);
 
         return redirect()->route('admin.financials.index', $redirectParams)
             ->with('status', 'Accountant salary saved successfully.');
@@ -318,7 +333,7 @@ class FinancialOverviewController extends Controller
 
         $salary->update(['status' => $request->status]);
 
-        $redirectParams = $request->only(['from_date', 'to_date', 'month', 'conversion_rate']);
+        $redirectParams = $this->getRedirectParams($request);
 
         return redirect()->route('admin.financials.index', $redirectParams)
             ->with('status', 'Support salary status updated.');
@@ -332,7 +347,7 @@ class FinancialOverviewController extends Controller
 
         $salary->update(['status' => $request->status]);
 
-        $redirectParams = $request->only(['from_date', 'to_date', 'month', 'conversion_rate']);
+        $redirectParams = $this->getRedirectParams($request);
 
         return redirect()->route('admin.financials.index', $redirectParams)
             ->with('status', 'Accountant salary status updated.');
@@ -342,7 +357,7 @@ class FinancialOverviewController extends Controller
     {
         $salary->delete();
 
-        $redirectParams = $request->only(['from_date', 'to_date', 'month', 'conversion_rate']);
+        $redirectParams = $this->getRedirectParams($request);
 
         return redirect()->route('admin.financials.index', $redirectParams)
             ->with('status', 'Support salary deleted successfully.');
@@ -352,7 +367,7 @@ class FinancialOverviewController extends Controller
     {
         $salary->delete();
 
-        $redirectParams = $request->only(['from_date', 'to_date', 'month', 'conversion_rate']);
+        $redirectParams = $this->getRedirectParams($request);
 
         return redirect()->route('admin.financials.index', $redirectParams)
             ->with('status', 'Accountant salary deleted successfully.');
@@ -365,5 +380,25 @@ class FinancialOverviewController extends Controller
         }
 
         return Carbon::createFromFormat('Y-m', $month)->startOfMonth();
+    }
+
+    protected function getRedirectParams(Request $request): array
+    {
+        $params = $request->only(['from_date', 'to_date', 'month']);
+        
+        // Include all currency conversion rates
+        $availableCurrencies = ['AED', 'USD', 'GBP', 'INR', 'EGP', 'EUR', 'SAR', 'KWD', 'QAR', 'JPY', 'CAD', 'AUD'];
+        foreach ($availableCurrencies as $currency) {
+            $rateKey = strtolower($currency) . '_to_egp_rate';
+            if ($request->has($rateKey)) {
+                $params[$rateKey] = $request->get($rateKey);
+            }
+        }
+        
+        if (isset($params['month']) && !$params['month']) {
+            unset($params['month']);
+        }
+        
+        return $params;
     }
 }

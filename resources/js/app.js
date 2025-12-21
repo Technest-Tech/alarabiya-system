@@ -4,7 +4,57 @@ import Alpine from 'alpinejs';
 
 window.Alpine = Alpine;
 
+// Helper function to check if mobile
+function checkIsMobile() {
+    return window.innerWidth < 1024;
+}
+
+// Create a global store for sidebar state
+Alpine.store('sidebar', {
+    open: false,
+    isMobile: checkIsMobile(),
+    
+    toggle() {
+        // Update isMobile state before toggling
+        this.isMobile = checkIsMobile();
+        
+        // Always allow toggle on mobile (screen width < 1024px)
+        // Check both stored value and current window width for reliability
+        if (this.isMobile || window.innerWidth < 1024) {
+            this.open = !this.open;
+        }
+    }
+});
+
+// Initialize store state after Alpine starts
 Alpine.start();
+
+document.addEventListener('DOMContentLoaded', () => {
+    const store = Alpine.store('sidebar');
+    if (store) {
+        // Ensure initial state is correct
+        store.isMobile = checkIsMobile();
+        store.open = !store.isMobile;
+        
+        // Handle window resize
+        window.addEventListener('resize', () => {
+            const wasMobile = store.isMobile;
+            store.isMobile = checkIsMobile();
+            if (!store.isMobile) {
+                store.open = true;
+            } else if (!wasMobile && store.isMobile) {
+                store.open = false;
+            }
+        });
+        
+        // Expose global toggle function as fallback
+        window.toggleSidebar = () => {
+            if (store) {
+                store.toggle();
+            }
+        };
+    }
+});
 
 // Handle sidebar toggle events
 document.addEventListener('DOMContentLoaded', function() {
