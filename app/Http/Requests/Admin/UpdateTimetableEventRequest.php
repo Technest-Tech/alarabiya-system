@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Admin;
 
+use App\Models\TimetableEvent;
 use Carbon\Carbon;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -43,6 +44,58 @@ class UpdateTimetableEventRequest extends FormRequest
 
             if ($endTime->lessThanOrEqualTo($startTime)) {
                 $validator->errors()->add('end_time', 'End time must be after the start time.');
+            }
+
+            // Check for teacher time conflicts (exclude current event)
+            $date = $this->input('date');
+            $teacherId = $this->input('teacher_id');
+            $event = $this->route('event');
+
+            if ($date && $teacherId && $start && $end && $event) {
+                try {
+                    // Get the timezone from the event
+                    $timezone = $event->timezone ?? config('app.timezone');
+                    
+                    $startAtLocal = Carbon::parse(
+                        sprintf('%s %s', $date, $start),
+                        $timezone
+                    );
+                    $endAtLocal = Carbon::parse(
+                        sprintf('%s %s', $date, $end),
+                        $timezone
+                    );
+
+                    // If end time is less than or equal to start time, it crosses midnight
+                    if ($endAtLocal->lessThanOrEqualTo($startAtLocal)) {
+                        $endAtLocal->addDay();
+                    }
+
+                    $startAt = $startAtLocal->clone()->utc();
+                    $endAt = $endAtLocal->clone()->utc();
+
+                    // Check for overlapping events (exclude current event)
+                    $conflictingEvents = TimetableEvent::where('teacher_id', $teacherId)
+                        ->where('id', '!=', $event->id)
+                        ->where(function ($query) use ($startAt, $endAt) {
+                            $query->where(function ($q) use ($startAt, $endAt) {
+                                $q->where('start_at', '<=', $startAt)
+                                  ->where('end_at', '>', $startAt);
+                            })->orWhere(function ($q) use ($startAt, $endAt) {
+                                $q->where('start_at', '<', $endAt)
+                                  ->where('end_at', '>=', $endAt);
+                            })->orWhere(function ($q) use ($startAt, $endAt) {
+                                $q->where('start_at', '>=', $startAt)
+                                  ->where('end_at', '<=', $endAt);
+                            });
+                        })
+                        ->exists();
+
+                    if ($conflictingEvents) {
+                        $validator->errors()->add('teacher_id', 'This teacher already has a lesson scheduled at this time. Please choose a different time.');
+                    }
+                } catch (\Exception $e) {
+                    // Skip conflict check if date/time parsing fails
+                }
             }
         });
     }

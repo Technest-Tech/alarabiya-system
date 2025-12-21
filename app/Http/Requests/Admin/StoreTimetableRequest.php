@@ -135,7 +135,161 @@ class StoreTimetableRequest extends FormRequest
                     $validator->errors()->add('end_time', 'End time must be after the start time.');
                 }
             }
+
+            // Check for teacher time conflicts in timetables
+            $this->validateTeacherConflicts($validator);
         });
+    }
+
+    /**
+     * Validate that the timetable doesn't create events that conflict with existing events for the same teacher.
+     */
+    protected function validateTeacherConflicts($validator): void
+    {
+        $teacherId = $this->input('teacher_id');
+        $startDate = $this->input('start_date');
+        $endDate = $this->input('end_date');
+        $daysOfWeek = $this->input('days_of_week', []);
+        $teacherTimezone = $this->input('teacher_timezone') ?? $this->input('timezone') ?? config('app.timezone');
+        $usePerDayTimes = $this->boolean('use_per_day_times', false);
+        $dayTimes = $this->input('day_times', []);
+        $startTime = $this->input('start_time');
+        $endTime = $this->input('end_time');
+
+        if (!$teacherId || !$startDate || !$endDate || empty($daysOfWeek)) {
+            return;
+        }
+
+        try {
+            $startDateCarbon = Carbon::parse($startDate);
+            $endDateCarbon = Carbon::parse($endDate);
+            $weekdayMap = [
+                'sunday' => Carbon::SUNDAY,
+                'monday' => Carbon::MONDAY,
+                'tuesday' => Carbon::TUESDAY,
+                'wednesday' => Carbon::WEDNESDAY,
+                'thursday' => Carbon::THURSDAY,
+                'friday' => Carbon::FRIDAY,
+                'saturday' => Carbon::SATURDAY,
+            ];
+
+            $days = collect($daysOfWeek)
+                ->map(fn (string $day): ?int => $weekdayMap[strtolower($day)] ?? null)
+                ->filter(fn ($value) => $value !== null)
+                ->unique()
+                ->values();
+
+            if ($days->isEmpty()) {
+                return;
+            }
+
+            // Normalize day_times to array format
+            $normalizedDayTimes = [];
+            if ($usePerDayTimes && is_array($dayTimes)) {
+                foreach ($dayTimes as $day => $dayData) {
+                    if (isset($dayData[0])) {
+                        $normalizedDayTimes[$day] = $dayData;
+                    } elseif (isset($dayData['start_time'])) {
+                        $normalizedDayTimes[$day] = [$dayData];
+                    }
+                }
+            }
+
+            $dayNameMap = [
+                'sunday' => 'sunday',
+                'monday' => 'monday',
+                'tuesday' => 'tuesday',
+                'wednesday' => 'wednesday',
+                'thursday' => 'thursday',
+                'friday' => 'friday',
+                'saturday' => 'saturday',
+            ];
+
+            $period = \Carbon\CarbonPeriod::create($startDateCarbon, $endDateCarbon);
+            $conflicts = [];
+
+            foreach ($period as $date) {
+                if (!$days->contains($date->dayOfWeek)) {
+                    continue;
+                }
+
+                $dayName = strtolower($date->format('l'));
+                $normalizedDayName = $dayNameMap[$dayName] ?? $dayName;
+
+                // Get slots for this day
+                $slots = [];
+                if ($usePerDayTimes && isset($normalizedDayTimes[$normalizedDayName])) {
+                    $slots = $normalizedDayTimes[$normalizedDayName];
+                } elseif ($startTime && $endTime) {
+                    $slots = [['start_time' => $startTime, 'end_time' => $endTime]];
+                }
+
+                foreach ($slots as $slot) {
+                    $dayStartTime = $slot['start_time'] ?? $startTime;
+                    $dayEndTime = $slot['end_time'] ?? $endTime;
+
+                    if (!$dayStartTime || !$dayEndTime) {
+                        continue;
+                    }
+
+                    $endDateInstance = $date->copy();
+                    if (Carbon::createFromFormat('H:i', $dayEndTime)->lessThanOrEqualTo(Carbon::createFromFormat('H:i', $dayStartTime))) {
+                        $endDateInstance = $endDateInstance->addDay();
+                    }
+
+                    $startAt = Carbon::parse(
+                        sprintf('%s %s', $date->toDateString(), $dayStartTime),
+                        $teacherTimezone
+                    )->utc();
+
+                    $endAt = Carbon::parse(
+                        sprintf('%s %s', $endDateInstance->toDateString(), $dayEndTime),
+                        $teacherTimezone
+                    )->utc();
+
+                    // Check for overlapping events (exclude current timetable if updating)
+                    $query = \App\Models\TimetableEvent::where('teacher_id', $teacherId)
+                        ->where(function ($q) use ($startAt, $endAt) {
+                            $q->where(function ($subQ) use ($startAt, $endAt) {
+                                $subQ->where('start_at', '<=', $startAt)
+                                  ->where('end_at', '>', $startAt);
+                            })->orWhere(function ($subQ) use ($startAt, $endAt) {
+                                $subQ->where('start_at', '<', $endAt)
+                                  ->where('end_at', '>=', $endAt);
+                            })->orWhere(function ($subQ) use ($startAt, $endAt) {
+                                $subQ->where('start_at', '>=', $startAt)
+                                  ->where('end_at', '<=', $endAt);
+                            });
+                        });
+
+                    // Exclude events from the current timetable if updating
+                    if ($this->route('timetable')) {
+                        $currentTimetableId = $this->route('timetable')->id;
+                        $query->where('timetable_id', '!=', $currentTimetableId);
+                    }
+
+                    $conflictingEvent = $query->first();
+
+                    if ($conflictingEvent) {
+                        $conflictDate = $startAt->clone()->setTimezone($teacherTimezone);
+                        $conflicts[] = $conflictDate->format('M d, Y') . ' at ' . 
+                                      Carbon::createFromFormat('H:i', $dayStartTime)->format('g:i A') . 
+                                      ' - ' . 
+                                      Carbon::createFromFormat('H:i', $dayEndTime)->format('g:i A');
+                    }
+                }
+            }
+
+            if (!empty($conflicts)) {
+                $conflictMessage = 'This teacher already has lessons scheduled at the following times: ' . implode(', ', array_slice($conflicts, 0, 5));
+                if (count($conflicts) > 5) {
+                    $conflictMessage .= ' and ' . (count($conflicts) - 5) . ' more.';
+                }
+                $validator->errors()->add('teacher_id', $conflictMessage);
+            }
+        } catch (\Exception $e) {
+            // Skip conflict check if date/time parsing fails
+        }
     }
 
     protected function prepareForValidation(): void
