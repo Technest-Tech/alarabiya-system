@@ -123,50 +123,78 @@ class TimetableGenerator
 
         $period = CarbonPeriod::create($startDate, $endDate);
 
-        return collect($period)
+        // Normalize day_times to always be in array format (for backward compatibility)
+        $normalizedDayTimes = [];
+        if ($usePerDayTimes && is_array($dayTimes)) {
+            foreach ($dayTimes as $day => $dayData) {
+                // Handle both old format (single object) and new format (array of slots)
+                if (isset($dayData[0])) {
+                    // New format: already an array of slots
+                    $normalizedDayTimes[$day] = $dayData;
+                } elseif (isset($dayData['start_time'])) {
+                    // Old format: single slot object, convert to array
+                    $normalizedDayTimes[$day] = [$dayData];
+                }
+            }
+        }
+
+        $events = collect();
+        
+        collect($period)
             ->filter(fn (Carbon $date): bool => $days->contains($date->dayOfWeek))
-            ->map(function (Carbon $date) use ($timetable, $teacherTimezone, $usePerDayTimes, $dayTimes, $dayNameMap): array {
+            ->each(function (Carbon $date) use ($timetable, $teacherTimezone, $usePerDayTimes, $normalizedDayTimes, $dayNameMap, &$events) {
                 // Get day name in lowercase
                 $dayName = strtolower($date->format('l'));
                 $normalizedDayName = $dayNameMap[$dayName] ?? $dayName;
 
-                // Determine start and end times
-                if ($usePerDayTimes && isset($dayTimes[$normalizedDayName])) {
-                    $dayStartTime = $dayTimes[$normalizedDayName]['start_time'] ?? $timetable->start_time;
-                    $dayEndTime = $dayTimes[$normalizedDayName]['end_time'] ?? $timetable->end_time;
+                // Get slots for this day
+                $slots = [];
+                if ($usePerDayTimes && isset($normalizedDayTimes[$normalizedDayName])) {
+                    $slots = $normalizedDayTimes[$normalizedDayName];
                 } else {
-                    $dayStartTime = $timetable->start_time;
-                    $dayEndTime = $timetable->end_time;
+                    // Use default single slot
+                    $slots = [[
+                        'start_time' => $timetable->start_time,
+                        'end_time' => $timetable->end_time,
+                    ]];
                 }
 
-                $endDateInstance = $date->copy();
-                if (Carbon::createFromFormat('H:i:s', $dayEndTime)->lessThanOrEqualTo(Carbon::createFromFormat('H:i:s', $dayStartTime))) {
-                    $endDateInstance = $endDateInstance->addDay();
+                // Generate an event for each slot
+                foreach ($slots as $slot) {
+                    $dayStartTime = $slot['start_time'] ?? $timetable->start_time;
+                    $dayEndTime = $slot['end_time'] ?? $timetable->end_time;
+
+                    $endDateInstance = $date->copy();
+                    if (Carbon::createFromFormat('H:i:s', $dayEndTime)->lessThanOrEqualTo(Carbon::createFromFormat('H:i:s', $dayStartTime))) {
+                        $endDateInstance = $endDateInstance->addDay();
+                    }
+
+                    // Use teacher timezone for event times
+                    $startAt = Carbon::parse(
+                        sprintf('%s %s', $date->toDateString(), $dayStartTime),
+                        $teacherTimezone
+                    )->utc();
+
+                    $endAt = Carbon::parse(
+                        sprintf('%s %s', $endDateInstance->toDateString(), $dayEndTime),
+                        $teacherTimezone
+                    )->utc();
+
+                    $events->push([
+                        'student_id' => $timetable->student_id,
+                        'teacher_id' => $timetable->teacher_id,
+                        'course_name' => $timetable->course_name,
+                        'timezone' => $teacherTimezone,
+                        'start_at' => $startAt,
+                        'end_at' => $endAt,
+                        'is_override' => false,
+                        'status' => 'scheduled',
+                        'metadata' => null,
+                    ]);
                 }
-
-                // Use teacher timezone for event times
-                $startAt = Carbon::parse(
-                    sprintf('%s %s', $date->toDateString(), $dayStartTime),
-                    $teacherTimezone
-                )->utc();
-
-                $endAt = Carbon::parse(
-                    sprintf('%s %s', $endDateInstance->toDateString(), $dayEndTime),
-                    $teacherTimezone
-                )->utc();
-
-                return [
-                    'student_id' => $timetable->student_id,
-                    'teacher_id' => $timetable->teacher_id,
-                    'course_name' => $timetable->course_name,
-                    'timezone' => $teacherTimezone,
-                    'start_at' => $startAt,
-                    'end_at' => $endAt,
-                    'is_override' => false,
-                    'status' => 'scheduled',
-                    'metadata' => null,
-                ];
             });
+
+        return $events;
     }
 
     /**
@@ -175,15 +203,25 @@ class TimetableGenerator
      */
     public function calculateStudentTimes(Timetable $timetable, string $teacherTimezone, ?string $studentTimezone, int $adjustmentHours = 0): void
     {
-        // Check if using per-day times - if so, use first day's times for student time calculation
+        // Check if using per-day times - if so, use first day's first slot for student time calculation
         $dayTimes = $timetable->day_times;
         $usePerDayTimes = !empty($dayTimes) && is_array($dayTimes);
 
         if ($usePerDayTimes && !empty($dayTimes)) {
-            // Use first available day's times for student time calculation
+            // Use first available day's first slot for student time calculation
             $firstDay = array_key_first($dayTimes);
-            $startTimeStr = $dayTimes[$firstDay]['start_time'] ?? $timetable->start_time;
-            $endTimeStr = $dayTimes[$firstDay]['end_time'] ?? $timetable->end_time;
+            $firstDayData = $dayTimes[$firstDay];
+            
+            // Handle both old format (single object) and new format (array of slots)
+            if (isset($firstDayData[0])) {
+                // New format: array of slots, use first slot
+                $startTimeStr = $firstDayData[0]['start_time'] ?? $timetable->start_time;
+                $endTimeStr = $firstDayData[0]['end_time'] ?? $timetable->end_time;
+            } else {
+                // Old format: single slot object
+                $startTimeStr = $firstDayData['start_time'] ?? $timetable->start_time;
+                $endTimeStr = $firstDayData['end_time'] ?? $timetable->end_time;
+            }
         } else {
             $startTimeStr = $timetable->start_time;
             $endTimeStr = $timetable->end_time;

@@ -28,8 +28,9 @@ class StoreTimetableRequest extends FormRequest
             'start_time' => ['nullable', 'date_format:H:i'],
             'end_time' => ['nullable', 'date_format:H:i'],
             'day_times' => ['nullable', 'array'],
-            'day_times.*.start_time' => ['nullable', 'date_format:H:i'],
-            'day_times.*.end_time' => ['nullable', 'date_format:H:i'],
+            'day_times.*' => ['nullable', 'array'], // Each day can be an array of slots
+            'day_times.*.*.start_time' => ['nullable', 'date_format:H:i'],
+            'day_times.*.*.end_time' => ['nullable', 'date_format:H:i'],
             'start_date' => ['required', 'date'],
             'end_date' => ['required', 'date', 'after_or_equal:start_date'],
             'days_of_week' => ['required', 'array', 'min:1'],
@@ -53,40 +54,64 @@ class StoreTimetableRequest extends FormRequest
             }
 
             if ($usePerDayTimes) {
-                // Validate per-day times
+                // Validate per-day times (supports both single slot and array of slots)
                 $dayTimes = $this->input('day_times', []);
                 $daysOfWeek = $this->input('days_of_week', []);
 
                 // Check that all selected days have times
                 foreach ($daysOfWeek as $day) {
                     if (!isset($dayTimes[$day])) {
-                        $validator->errors()->add("day_times.{$day}.start_time", "Start time is required for {$day}.");
-                        $validator->errors()->add("day_times.{$day}.end_time", "End time is required for {$day}.");
+                        $validator->errors()->add("day_times.{$day}", "At least one time slot is required for {$day}.");
                         continue;
                     }
 
-                    $dayStart = $dayTimes[$day]['start_time'] ?? null;
-                    $dayEnd = $dayTimes[$day]['end_time'] ?? null;
-
-                    if (!$dayStart || trim($dayStart) === '') {
-                        $validator->errors()->add("day_times.{$day}.start_time", "Start time is required for {$day}.");
-                    }
+                    $dayData = $dayTimes[$day];
                     
-                    if (!$dayEnd || trim($dayEnd) === '') {
-                        $validator->errors()->add("day_times.{$day}.end_time", "End time is required for {$day}.");
+                    // Handle both old format (single object) and new format (array of objects)
+                    $slots = [];
+                    if (isset($dayData[0]) || (isset($dayData['start_time']) && !isset($dayData[0]))) {
+                        // Check if it's an array (new format) or single object (old format)
+                        if (isset($dayData[0])) {
+                            // New format: array of slots
+                            $slots = $dayData;
+                        } else {
+                            // Old format: single slot object, convert to array
+                            $slots = [$dayData];
+                        }
                     }
 
-                    // Only validate time comparison if both times are provided
-                    if ($dayStart && $dayEnd && trim($dayStart) !== '' && trim($dayEnd) !== '') {
-                        try {
-                            $startTime = Carbon::createFromFormat('H:i', $dayStart);
-                            $endTime = Carbon::createFromFormat('H:i', $dayEnd);
-                            
-                            if ($endTime->equalTo($startTime) || $endTime->lessThan($startTime)) {
-                                $validator->errors()->add("day_times.{$day}.end_time", "End time must be after the start time for {$day}.");
+                    if (empty($slots)) {
+                        $validator->errors()->add("day_times.{$day}", "At least one time slot is required for {$day}.");
+                        continue;
+                    }
+
+                    // Validate each slot
+                    foreach ($slots as $slotIndex => $slot) {
+                        $slotPrefix = count($slots) > 1 ? "day_times.{$day}.{$slotIndex}" : "day_times.{$day}";
+                        
+                        $dayStart = $slot['start_time'] ?? null;
+                        $dayEnd = $slot['end_time'] ?? null;
+
+                        if (!$dayStart || trim($dayStart) === '') {
+                            $validator->errors()->add("{$slotPrefix}.start_time", "Start time is required for {$day} slot " . ($slotIndex + 1) . ".");
+                        }
+                        
+                        if (!$dayEnd || trim($dayEnd) === '') {
+                            $validator->errors()->add("{$slotPrefix}.end_time", "End time is required for {$day} slot " . ($slotIndex + 1) . ".");
+                        }
+
+                        // Only validate time comparison if both times are provided
+                        if ($dayStart && $dayEnd && trim($dayStart) !== '' && trim($dayEnd) !== '') {
+                            try {
+                                $startTime = Carbon::createFromFormat('H:i', $dayStart);
+                                $endTime = Carbon::createFromFormat('H:i', $dayEnd);
+                                
+                                if ($endTime->equalTo($startTime) || $endTime->lessThan($startTime)) {
+                                    $validator->errors()->add("{$slotPrefix}.end_time", "End time must be after the start time for {$day} slot " . ($slotIndex + 1) . ".");
+                                }
+                            } catch (\InvalidArgumentException) {
+                                // Invalid time format - already handled by date_format rule
                             }
-                        } catch (\InvalidArgumentException) {
-                            // Invalid time format - already handled by date_format rule
                         }
                     }
                 }
@@ -149,30 +174,56 @@ class StoreTimetableRequest extends FormRequest
 
         if ($usePerDayTimes) {
             // Handle per-day times - only process selected days
+            // Supports both old format (single object) and new format (array of slots)
             $dayTimes = $this->input('day_times', []);
             $daysOfWeek = $this->input('days_of_week', []);
             $formattedDayTimes = [];
             
             // Only process times for selected days
             foreach ($daysOfWeek as $day) {
-                if (isset($dayTimes[$day]) && 
-                    isset($dayTimes[$day]['start_time']) && 
-                    isset($dayTimes[$day]['end_time']) &&
-                    trim($dayTimes[$day]['start_time']) !== '' &&
-                    trim($dayTimes[$day]['end_time']) !== '') {
-                    $formattedDayTimes[$day] = [
-                        'start_time' => Carbon::createFromFormat('H:i', $dayTimes[$day]['start_time'])->format('H:i:s'),
-                        'end_time' => Carbon::createFromFormat('H:i', $dayTimes[$day]['end_time'])->format('H:i:s'),
-                    ];
+                if (!isset($dayTimes[$day])) {
+                    continue;
+                }
+
+                $dayData = $dayTimes[$day];
+                $slots = [];
+                
+                // Normalize to array format (handle both old and new formats)
+                if (isset($dayData[0])) {
+                    // New format: already an array
+                    $slots = $dayData;
+                } elseif (isset($dayData['start_time'])) {
+                    // Old format: single object, convert to array
+                    $slots = [$dayData];
+                }
+
+                // Format each slot
+                $formattedSlots = [];
+                foreach ($slots as $slot) {
+                    if (isset($slot['start_time']) && 
+                        isset($slot['end_time']) &&
+                        trim($slot['start_time']) !== '' &&
+                        trim($slot['end_time']) !== '') {
+                        $formattedSlots[] = [
+                            'start_time' => Carbon::createFromFormat('H:i', $slot['start_time'])->format('H:i:s'),
+                            'end_time' => Carbon::createFromFormat('H:i', $slot['end_time'])->format('H:i:s'),
+                        ];
+                    }
+                }
+
+                if (!empty($formattedSlots)) {
+                    $formattedDayTimes[$day] = $formattedSlots;
                 }
             }
             
             $data['day_times'] = $formattedDayTimes;
-            // Set default start_time and end_time for backward compatibility (use first day's times)
+            // Set default start_time and end_time for backward compatibility (use first day's first slot)
             if (!empty($formattedDayTimes)) {
                 $firstDay = array_key_first($formattedDayTimes);
-                $data['start_time'] = $formattedDayTimes[$firstDay]['start_time'];
-                $data['end_time'] = $formattedDayTimes[$firstDay]['end_time'];
+                if (isset($formattedDayTimes[$firstDay][0])) {
+                    $data['start_time'] = $formattedDayTimes[$firstDay][0]['start_time'];
+                    $data['end_time'] = $formattedDayTimes[$firstDay][0]['end_time'];
+                }
             }
         } else {
             // Handle single time for all days

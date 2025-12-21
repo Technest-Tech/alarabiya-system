@@ -6,10 +6,22 @@
         $formattedDayTimes = [];
         if (!empty($dayTimes) && is_array($dayTimes)) {
             foreach ($dayTimes as $day => $times) {
-                $formattedDayTimes[$day] = [
-                    'start_time' => isset($times['start_time']) ? Str::of($times['start_time'])->substr(0, 5)->value() : '',
-                    'end_time' => isset($times['end_time']) ? Str::of($times['end_time'])->substr(0, 5)->value() : '',
-                ];
+                // Handle both old format (single object) and new format (array of slots)
+                if (is_array($times) && isset($times[0]) && is_array($times[0])) {
+                    // New format: array of slots - ensure it's a proper indexed array
+                    $formattedDayTimes[$day] = array_values(array_map(function ($slot) {
+                        return [
+                            'start_time' => isset($slot['start_time']) ? Str::of($slot['start_time'])->substr(0, 5)->value() : '',
+                            'end_time' => isset($slot['end_time']) ? Str::of($slot['end_time'])->substr(0, 5)->value() : '',
+                        ];
+                    }, $times));
+                } elseif (isset($times['start_time']) && !isset($times[0])) {
+                    // Old format: single object, convert to array for consistency
+                    $formattedDayTimes[$day] = [[
+                        'start_time' => Str::of($times['start_time'])->substr(0, 5)->value(),
+                        'end_time' => Str::of($times['end_time'])->substr(0, 5)->value(),
+                    ]];
+                }
             }
         }
         
@@ -580,34 +592,65 @@
                         <label class="text-sm font-medium text-gray-700 dark:text-gray-300">Time for each day</label>
                         <div class="grid gap-4 md:grid-cols-2">
                             <template x-for="day in ['sunday','monday','tuesday','wednesday','thursday','friday','saturday']" :key="day">
-                                <div x-show="form.days_of_week.includes(day)" class="flex flex-col space-y-2 p-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
-                                    <label class="text-sm font-semibold text-gray-700 dark:text-gray-300" x-text="day.charAt(0).toUpperCase() + day.slice(1)"></label>
-                                    <div class="grid grid-cols-2 gap-2">
-                                        <div class="flex flex-col">
-                                            <label class="mb-1 text-xs text-gray-600 dark:text-gray-400">Start</label>
-                                            <input
-                                                type="time"
-                                                :name="form.use_per_day_times ? 'day_times[' + day + '][start_time]' : ''"
-                                                x-model="form.day_times[day].start_time"
-                                                @input="updatePerDayStudentTime(day)"
-                                                :required="form.use_per_day_times && form.days_of_week.includes(day)"
-                                                :disabled="!form.use_per_day_times"
-                                                class="rounded-lg border border-gray-300 px-2 py-1.5 text-sm text-gray-900 shadow-sm transition focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-200"
-                                            />
-                                        </div>
-                                        <div class="flex flex-col">
-                                            <label class="mb-1 text-xs text-gray-600 dark:text-gray-400">End</label>
-                                            <input
-                                                type="time"
-                                                :name="form.use_per_day_times ? 'day_times[' + day + '][end_time]' : ''"
-                                                x-model="form.day_times[day].end_time"
-                                                @input="updatePerDayStudentTime(day)"
-                                                :required="form.use_per_day_times && form.days_of_week.includes(day)"
-                                                :disabled="!form.use_per_day_times"
-                                                class="rounded-lg border border-gray-300 px-2 py-1.5 text-sm text-gray-900 shadow-sm transition focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-200"
-                                            />
-                                        </div>
+                                <div x-show="form.days_of_week.includes(day)" class="flex flex-col space-y-3 p-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
+                                    <div class="flex items-center justify-between">
+                                        <label class="text-sm font-semibold text-gray-700 dark:text-gray-300" x-text="day.charAt(0).toUpperCase() + day.slice(1)"></label>
+                                        <button
+                                            type="button"
+                                            @click="addTimeSlot(day)"
+                                            class="text-xs px-2 py-1 rounded-md bg-indigo-600 text-white hover:bg-indigo-700 transition"
+                                        >
+                                            + Add Slot
+                                        </button>
                                     </div>
+                                    <template x-for="(slot, slotIndex) in (() => { 
+                                        const dayData = form.day_times[day]; 
+                                        if (!dayData) return [{ start_time: '', end_time: '' }];
+                                        if (Array.isArray(dayData)) return dayData.length > 0 ? dayData : [{ start_time: '', end_time: '' }];
+                                        return [dayData];
+                                    })()" :key="slotIndex">
+                                        <div class="flex items-start gap-2 p-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900">
+                                            <div class="flex-1 grid grid-cols-2 gap-2">
+                                                <div class="flex flex-col">
+                                                    <label class="mb-1 text-xs text-gray-600 dark:text-gray-400">Start</label>
+                                                    <input
+                                                        type="time"
+                                                        :name="form.use_per_day_times ? 'day_times[' + day + '][' + slotIndex + '][start_time]' : ''"
+                                                        x-model="slot.start_time"
+                                                        @input="updatePerDayStudentTime(day)"
+                                                        :required="form.use_per_day_times && form.days_of_week.includes(day)"
+                                                        :disabled="!form.use_per_day_times"
+                                                        class="rounded-lg border border-gray-300 px-2 py-1.5 text-sm text-gray-900 shadow-sm transition focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-200"
+                                                    />
+                                                </div>
+                                                <div class="flex flex-col">
+                                                    <label class="mb-1 text-xs text-gray-600 dark:text-gray-400">End</label>
+                                                    <input
+                                                        type="time"
+                                                        :name="form.use_per_day_times ? 'day_times[' + day + '][' + slotIndex + '][end_time]' : ''"
+                                                        x-model="slot.end_time"
+                                                        @input="updatePerDayStudentTime(day)"
+                                                        :required="form.use_per_day_times && form.days_of_week.includes(day)"
+                                                        :disabled="!form.use_per_day_times"
+                                                        class="rounded-lg border border-gray-300 px-2 py-1.5 text-sm text-gray-900 shadow-sm transition focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-200"
+                                                    />
+                                                </div>
+                                            </div>
+                                            <button
+                                                type="button"
+                                                @click="removeTimeSlot(day, slotIndex)"
+                                                x-show="(() => { 
+                                                    const dayData = form.day_times[day]; 
+                                                    if (!dayData) return false;
+                                                    if (Array.isArray(dayData)) return dayData.length > 1;
+                                                    return false;
+                                                })()"
+                                                class="mt-6 px-2 py-1 text-xs text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300"
+                                            >
+                                                ×
+                                            </button>
+                                        </div>
+                                    </template>
                                 </div>
                             </template>
                         </div>
@@ -655,13 +698,13 @@
                     end_time: '',
                     use_per_day_times: false,
                     day_times: {
-                        sunday: { start_time: '', end_time: '' },
-                        monday: { start_time: '', end_time: '' },
-                        tuesday: { start_time: '', end_time: '' },
-                        wednesday: { start_time: '', end_time: '' },
-                        thursday: { start_time: '', end_time: '' },
-                        friday: { start_time: '', end_time: '' },
-                        saturday: { start_time: '', end_time: '' },
+                        sunday: [{ start_time: '', end_time: '' }],
+                        monday: [{ start_time: '', end_time: '' }],
+                        tuesday: [{ start_time: '', end_time: '' }],
+                        wednesday: [{ start_time: '', end_time: '' }],
+                        thursday: [{ start_time: '', end_time: '' }],
+                        friday: [{ start_time: '', end_time: '' }],
+                        saturday: [{ start_time: '', end_time: '' }],
                     },
                     time_difference_hours: null,
                     use_manual_time_diff: false,
@@ -689,13 +732,13 @@
                         end_time: '',
                         use_per_day_times: false,
                         day_times: {
-                            sunday: { start_time: '', end_time: '' },
-                            monday: { start_time: '', end_time: '' },
-                            tuesday: { start_time: '', end_time: '' },
-                            wednesday: { start_time: '', end_time: '' },
-                            thursday: { start_time: '', end_time: '' },
-                            friday: { start_time: '', end_time: '' },
-                            saturday: { start_time: '', end_time: '' },
+                            sunday: [{ start_time: '', end_time: '' }],
+                            monday: [{ start_time: '', end_time: '' }],
+                            tuesday: [{ start_time: '', end_time: '' }],
+                            wednesday: [{ start_time: '', end_time: '' }],
+                            thursday: [{ start_time: '', end_time: '' }],
+                            friday: [{ start_time: '', end_time: '' }],
+                            saturday: [{ start_time: '', end_time: '' }],
                         },
                         time_difference_hours: null,
                         use_manual_time_diff: false,
@@ -717,23 +760,69 @@
                     this.isEdit = true;
                     this.formAction = record.update_url;
                     
-                    // Initialize day_times object
+                    // Initialize day_times object - handle both old format (single object) and new format (array)
                     const dayTimes = {};
                     const allDays = ['sunday','monday','tuesday','wednesday','thursday','friday','saturday'];
                     allDays.forEach(day => {
-                        let startTime = record.day_times && record.day_times[day] ? record.day_times[day].start_time : '';
-                        let endTime = record.day_times && record.day_times[day] ? record.day_times[day].end_time : '';
-                        // Convert HH:mm:ss to HH:mm format if needed
-                        if (startTime && startTime.length > 5) {
-                            startTime = startTime.substring(0, 5);
+                        const dayData = record.day_times && record.day_times[day] ? record.day_times[day] : null;
+                        
+                        if (!dayData) {
+                            dayTimes[day] = [{ start_time: '', end_time: '' }];
+                        } else if (Array.isArray(dayData)) {
+                            // New format: array of slots
+                            dayTimes[day] = dayData.map(slot => {
+                                let startTime = slot.start_time || '';
+                                let endTime = slot.end_time || '';
+                                // Convert HH:mm:ss to HH:mm format if needed
+                                if (startTime && startTime.length > 5) {
+                                    startTime = startTime.substring(0, 5);
+                                }
+                                if (endTime && endTime.length > 5) {
+                                    endTime = endTime.substring(0, 5);
+                                }
+                                return { start_time: startTime, end_time: endTime };
+                            });
+                            // Ensure at least one slot
+                            if (dayTimes[day].length === 0) {
+                                dayTimes[day] = [{ start_time: '', end_time: '' }];
+                            }
+                        } else if (typeof dayData === 'object' && dayData !== null && dayData.constructor === Object) {
+                            // Check if it's an object with numeric keys (array-like object) or a single slot object
+                            const keys = Object.keys(dayData);
+                            const hasNumericKeys = keys.length > 0 && keys.every(key => !isNaN(parseInt(key)));
+                            
+                            if (hasNumericKeys && keys.length > 0) {
+                                // Object with numeric keys (array-like), convert to array
+                                dayTimes[day] = keys.sort((a, b) => parseInt(a) - parseInt(b)).map(key => {
+                                    const slot = dayData[key];
+                                    let startTime = slot.start_time || '';
+                                    let endTime = slot.end_time || '';
+                                    if (startTime && startTime.length > 5) {
+                                        startTime = startTime.substring(0, 5);
+                                    }
+                                    if (endTime && endTime.length > 5) {
+                                        endTime = endTime.substring(0, 5);
+                                    }
+                                    return { start_time: startTime, end_time: endTime };
+                                });
+                            } else if (dayData.start_time !== undefined) {
+                                // Old format: single object, convert to array
+                                let startTime = dayData.start_time || '';
+                                let endTime = dayData.end_time || '';
+                                // Convert HH:mm:ss to HH:mm format if needed
+                                if (startTime && startTime.length > 5) {
+                                    startTime = startTime.substring(0, 5);
+                                }
+                                if (endTime && endTime.length > 5) {
+                                    endTime = endTime.substring(0, 5);
+                                }
+                                dayTimes[day] = [{ start_time: startTime, end_time: endTime }];
+                            } else {
+                                dayTimes[day] = [{ start_time: '', end_time: '' }];
+                            }
+                        } else {
+                            dayTimes[day] = [{ start_time: '', end_time: '' }];
                         }
-                        if (endTime && endTime.length > 5) {
-                            endTime = endTime.substring(0, 5);
-                        }
-                        dayTimes[day] = {
-                            start_time: startTime,
-                            end_time: endTime,
-                        };
                     });
 
                     // If using per-day times, extract start_time and end_time from first day for fallback
@@ -751,8 +840,19 @@
                     if (record.use_per_day_times && record.day_times) {
                         const firstDay = record.days_of_week && record.days_of_week.length > 0 ? record.days_of_week[0] : null;
                         if (firstDay && record.day_times[firstDay]) {
-                            let dayStart = record.day_times[firstDay].start_time || defaultStartTime;
-                            let dayEnd = record.day_times[firstDay].end_time || defaultEndTime;
+                            const firstDayData = record.day_times[firstDay];
+                            let dayStart = defaultStartTime;
+                            let dayEnd = defaultEndTime;
+                            
+                            // Handle both old format (single object) and new format (array)
+                            if (Array.isArray(firstDayData) && firstDayData.length > 0) {
+                                dayStart = firstDayData[0].start_time || defaultStartTime;
+                                dayEnd = firstDayData[0].end_time || defaultEndTime;
+                            } else if (firstDayData.start_time) {
+                                dayStart = firstDayData.start_time || defaultStartTime;
+                                dayEnd = firstDayData.end_time || defaultEndTime;
+                            }
+                            
                             // Convert HH:mm:ss to HH:mm format if needed
                             if (dayStart && dayStart.length > 5) {
                                 dayStart = dayStart.substring(0, 5);
@@ -861,36 +961,41 @@
                         // Find the first day in week order that is selected and has times
                         for (const day of weekDays) {
                             if (this.form.days_of_week.includes(day) && 
-                                this.form.day_times[day] && 
-                                this.form.day_times[day].start_time && 
-                                this.form.day_times[day].end_time) {
-                                // Convert HH:mm:ss to HH:mm format if needed
-                                let startTime = this.form.day_times[day].start_time;
-                                let endTime = this.form.day_times[day].end_time;
+                                this.form.day_times[day]) {
+                                let dayData = this.form.day_times[day];
+                                let firstSlot = null;
                                 
-                                if (startTime && startTime.length > 5) {
-                                    startTime = startTime.substring(0, 5);
-                                }
-                                if (endTime && endTime.length > 5) {
-                                    endTime = endTime.substring(0, 5);
+                                // Handle both array format and old single object format
+                                if (Array.isArray(dayData) && dayData.length > 0) {
+                                    firstSlot = dayData[0];
+                                } else if (dayData.start_time) {
+                                    firstSlot = dayData;
                                 }
                                 
-                                this.form.start_time = startTime;
-                                this.form.end_time = endTime;
-                                foundFirstDay = true;
-                                break; // Use the first day found (first card in UI)
+                                if (firstSlot && firstSlot.start_time && firstSlot.end_time) {
+                                    // Convert HH:mm:ss to HH:mm format if needed
+                                    let startTime = firstSlot.start_time;
+                                    let endTime = firstSlot.end_time;
+                                    
+                                    if (startTime && startTime.length > 5) {
+                                        startTime = startTime.substring(0, 5);
+                                    }
+                                    if (endTime && endTime.length > 5) {
+                                        endTime = endTime.substring(0, 5);
+                                    }
+                                    
+                                    this.form.start_time = startTime;
+                                    this.form.end_time = endTime;
+                                    foundFirstDay = true;
+                                    break; // Use the first day found (first card in UI)
+                                }
                             }
                         }
                         
                         // Clear day_times values but keep structure to prevent errors
                         const allDays = ['sunday','monday','tuesday','wednesday','thursday','friday','saturday'];
                         allDays.forEach(day => {
-                            if (this.form.day_times[day]) {
-                                this.form.day_times[day].start_time = '';
-                                this.form.day_times[day].end_time = '';
-                            } else {
-                                this.form.day_times[day] = { start_time: '', end_time: '' };
-                            }
+                            this.form.day_times[day] = [{ start_time: '', end_time: '' }];
                         });
                     }
                 },
@@ -906,40 +1011,64 @@
                     const allDays = ['sunday','monday','tuesday','wednesday','thursday','friday','saturday'];
                     const dayTimes = {};
                     allDays.forEach(day => {
-                        dayTimes[day] = {
-                            start_time: '',
-                            end_time: '',
-                        };
+                        dayTimes[day] = [{ start_time: '', end_time: '' }];
                     });
                     return dayTimes;
                 },
 
                 initializeDayTimes() {
                     const allDays = ['sunday','monday','tuesday','wednesday','thursday','friday','saturday'];
-                    // Ensure all days have an entry
+                    // Ensure all days have an entry (as array)
                     allDays.forEach(day => {
                         if (!this.form.day_times[day]) {
-                            this.form.day_times[day] = {
-                                start_time: '',
-                                end_time: '',
-                            };
+                            this.form.day_times[day] = [{ start_time: '', end_time: '' }];
+                        } else if (!Array.isArray(this.form.day_times[day])) {
+                            // Convert old format (single object) to new format (array)
+                            this.form.day_times[day] = [this.form.day_times[day]];
                         }
                     });
                     // Initialize times for selected days
                     this.form.days_of_week.forEach(day => {
-                        if (!this.form.day_times[day].start_time) {
-                            this.form.day_times[day].start_time = this.form.start_time || '';
-                        }
-                        if (!this.form.day_times[day].end_time) {
-                            this.form.day_times[day].end_time = this.form.end_time || '';
+                        if (this.form.day_times[day] && Array.isArray(this.form.day_times[day]) && this.form.day_times[day].length > 0) {
+                            const firstSlot = this.form.day_times[day][0];
+                            if (!firstSlot.start_time) {
+                                firstSlot.start_time = this.form.start_time || '';
+                            }
+                            if (!firstSlot.end_time) {
+                                firstSlot.end_time = this.form.end_time || '';
+                            }
                         }
                     });
+                },
+
+                addTimeSlot(day) {
+                    if (!this.form.day_times[day]) {
+                        this.form.day_times[day] = [];
+                    }
+                    if (!Array.isArray(this.form.day_times[day])) {
+                        // Convert old format to new format
+                        this.form.day_times[day] = [this.form.day_times[day]];
+                    }
+                    this.form.day_times[day].push({
+                        start_time: this.form.start_time || '',
+                        end_time: this.form.end_time || '',
+                    });
+                },
+
+                removeTimeSlot(day, slotIndex) {
+                    if (this.form.day_times[day] && Array.isArray(this.form.day_times[day])) {
+                        this.form.day_times[day].splice(slotIndex, 1);
+                        // Ensure at least one slot exists
+                        if (this.form.day_times[day].length === 0) {
+                            this.form.day_times[day] = [{ start_time: '', end_time: '' }];
+                        }
+                    }
                 },
 
                 updatePerDayStudentTime(day) {
                     // This could be enhanced to calculate student times per day if needed
                     // For now, just trigger the general calculation
-                    if (this.form.day_times[day] && this.form.day_times[day].start_time && this.form.day_times[day].end_time) {
+                    if (this.form.day_times[day] && Array.isArray(this.form.day_times[day]) && this.form.day_times[day].length > 0) {
                         // Per-day student time calculation could go here
                     }
                 },
