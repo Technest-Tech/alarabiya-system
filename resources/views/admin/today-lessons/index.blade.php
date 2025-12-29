@@ -91,7 +91,7 @@
 
         <!-- Lessons Table -->
         <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
-            <div class="overflow-x-auto">
+            <div class="overflow-x-auto relative">
                 <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                     <thead class="bg-gray-50 dark:bg-gray-700/50">
                         <tr>
@@ -101,12 +101,12 @@
                             <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Teacher</th>
                             <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Course</th>
                             <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status</th>
-                            <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Actions</th>
+                            <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider sticky right-0 bg-gray-50 dark:bg-gray-700/50 z-10 border-l border-gray-200 dark:border-gray-600">Actions</th>
                         </tr>
                     </thead>
                     <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                         @forelse($events as $event)
-                            <tr class="transition-colors
+                            <tr class="transition-colors group
                                 @if($event['status'] === 'cancelled') bg-red-50/50 dark:bg-red-900/10 hover:bg-red-100/50 dark:hover:bg-red-900/20
                                 @elseif($event['status'] === 'absent') bg-orange-50/50 dark:bg-orange-900/10 hover:bg-orange-100/50 dark:hover:bg-orange-900/20
                                 @elseif($event['status'] === 'rescheduled') bg-yellow-50/50 dark:bg-yellow-900/10 hover:bg-yellow-100/50 dark:hover:bg-yellow-900/20
@@ -153,7 +153,13 @@
                                         {{ ucfirst($event['status']) }}
                                     </span>
                                 </td>
-                                <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium sticky right-0 z-10 border-l border-gray-200 dark:border-gray-600
+                                    @if($event['status'] === 'cancelled') bg-red-50/50 dark:bg-red-900/10 group-hover:bg-red-100/50 dark:group-hover:bg-red-900/20
+                                    @elseif($event['status'] === 'absent') bg-orange-50/50 dark:bg-orange-900/10 group-hover:bg-orange-100/50 dark:group-hover:bg-orange-900/20
+                                    @elseif($event['status'] === 'rescheduled') bg-yellow-50/50 dark:bg-yellow-900/10 group-hover:bg-yellow-100/50 dark:group-hover:bg-yellow-900/20
+                                    @elseif($event['status'] === 'attended') bg-green-50/50 dark:bg-green-900/10 group-hover:bg-green-100/50 dark:group-hover:bg-green-900/20
+                                    @else bg-white dark:bg-gray-800 group-hover:bg-gray-50 dark:group-hover:bg-gray-700/50
+                                    @endif">
                                     <div class="flex items-center justify-end space-x-2">
                                         <div class="relative group">
                                             <button
@@ -218,7 +224,7 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="6" class="px-6 py-12 text-center">
+                                <td colspan="7" class="px-6 py-12 text-center">
                                     <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                                     </svg>

@@ -17,6 +17,32 @@ use Illuminate\Http\Request;
 
 class TimetableCalendarController extends Controller
 {
+    /**
+     * Get background and border colors based on event status
+     */
+    private function getStatusColors(string $status): array
+    {
+        $backgroundColorMap = [
+            'scheduled' => '#eef2ff',
+            'cancelled' => '#fef2f2',
+            'absent' => '#fff7ed',
+            'attended' => '#f0fdf4',
+            'rescheduled' => '#fefce8',
+        ];
+        $borderColorMap = [
+            'scheduled' => '#c7d2fe',
+            'cancelled' => '#fecaca',
+            'absent' => '#fed7aa',
+            'attended' => '#bbf7d0',
+            'rescheduled' => '#fef08a',
+        ];
+
+        return [
+            'backgroundColor' => $backgroundColorMap[$status] ?? $backgroundColorMap['scheduled'],
+            'borderColor' => $borderColorMap[$status] ?? $borderColorMap['scheduled'],
+        ];
+    }
+
     public function index(Request $request): View
     {
         $filters = [
@@ -130,6 +156,9 @@ class TimetableCalendarController extends Controller
                     $timezone
                 );
 
+                $status = $event->status ?? 'scheduled';
+                $colors = $this->getStatusColors($status);
+
                 return [
                     'id' => $event->id,
                     'title' => sprintf(
@@ -139,6 +168,8 @@ class TimetableCalendarController extends Controller
                     ),
                     'start' => $start->toIso8601String(),
                     'end' => $end->toIso8601String(),
+                    'backgroundColor' => $colors['backgroundColor'],
+                    'borderColor' => $colors['borderColor'],
                     'extendedProps' => [
                         'student' => $event->student?->name,
                         'teacher' => optional($event->teacher?->user)->name,
@@ -151,6 +182,7 @@ class TimetableCalendarController extends Controller
                         'timetable_id' => $event->timetable_id,
                         'is_override' => (bool) $event->is_override,
                         'duration' => $start->diffInMinutes($end),
+                        'status' => $status,
                     ],
                 ];
             });
@@ -262,6 +294,9 @@ class TimetableCalendarController extends Controller
             );
         }
 
+        $status = $event->status ?? 'scheduled';
+        $colors = $this->getStatusColors($status);
+
         return response()->json([
             'message' => 'Event created.',
             'event' => [
@@ -273,6 +308,8 @@ class TimetableCalendarController extends Controller
                 ),
                 'start' => $start->toIso8601String(),
                 'end' => $end->toIso8601String(),
+                'backgroundColor' => $colors['backgroundColor'],
+                'borderColor' => $colors['borderColor'],
                 'extendedProps' => [
                     'student' => $event->student?->name,
                     'teacher' => optional($event->teacher?->user)->name,
@@ -285,6 +322,7 @@ class TimetableCalendarController extends Controller
                     'timetable_id' => $event->timetable_id,
                     'is_override' => (bool) $event->is_override,
                     'duration' => $start->diffInMinutes($end),
+                    'status' => $status,
                 ],
             ],
         ], 201);
@@ -385,6 +423,9 @@ class TimetableCalendarController extends Controller
             );
         }
 
+        $status = $event->status ?? 'scheduled';
+        $colors = $this->getStatusColors($status);
+
         return response()->json([
             'message' => 'Event updated.',
             'event' => [
@@ -396,6 +437,8 @@ class TimetableCalendarController extends Controller
                 ),
                 'start' => $start->toIso8601String(),
                 'end' => $end->toIso8601String(),
+                'backgroundColor' => $colors['backgroundColor'],
+                'borderColor' => $colors['borderColor'],
                 'extendedProps' => [
                     'student' => $event->student?->name,
                     'teacher' => optional($event->teacher?->user)->name,
@@ -408,6 +451,7 @@ class TimetableCalendarController extends Controller
                     'timetable_id' => $event->timetable_id,
                     'is_override' => (bool) $event->is_override,
                     'duration' => $start->diffInMinutes($end),
+                    'status' => $status,
                 ],
             ],
         ]);

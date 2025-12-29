@@ -11,10 +11,10 @@
             })
         }
     }"
-    class="fixed inset-y-0 left-0 z-50 w-64 bg-gradient-to-b from-indigo-700 to-indigo-900 text-white shadow-xl transition-transform duration-300 ease-in-out"
+    class="fixed inset-y-0 left-0 z-50 w-64 bg-gradient-to-b from-indigo-700 to-indigo-900 text-white shadow-xl transition-transform duration-300 ease-in-out flex flex-col"
     :class="$store.sidebar.isMobile ? ($store.sidebar.open ? 'translate-x-0' : '-translate-x-full') : 'translate-x-0'"
     <!-- Logo Section -->
-    <div class="flex h-16 items-center justify-between px-6 border-b border-indigo-600">
+    <div class="flex h-16 items-center justify-between px-6 border-b border-indigo-600 flex-shrink-0">
         <a href="{{ Auth::user()->canAccessAdminDashboard() ? route('admin.dashboard') : route('teacher.dashboard') }}" class="flex items-center space-x-3">
             <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-white/10 backdrop-blur-sm">
                 <svg class="h-6 w-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -45,7 +45,7 @@
     </div>
 
     <!-- Navigation Menu -->
-    <nav class="mt-6 px-3 space-y-1">
+    <nav class="mt-6 px-3 space-y-1 flex-1 overflow-y-auto pb-4">
         @if(Auth::user()->isAdmin())
             <!-- Admin Menu Items -->
             <a href="{{ route('admin.dashboard') }}" class="flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors duration-150 {{ request()->routeIs('admin.dashboard') ? 'bg-white text-indigo-700 shadow-lg' : 'text-white hover:bg-white/10' }}">
@@ -208,6 +208,13 @@
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7M9 5h6a2 2 0 012 2v12a2 2 0 01-2 2H9a2 2 0 01-2-2V7a2 2 0 012-2z" />
                 </svg>
                 Support Attendance
+            </a>
+            <a href="{{ route('admin.settings.index') }}" class="flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors duration-150 {{ request()->routeIs('admin.settings.*') ? 'bg-white text-indigo-700 shadow-lg' : 'text-white hover:bg-white/10' }}">
+                <svg class="mr-3 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+                Settings
             </a>
         @elseif(Auth::user()->isAccountant())
             <!-- Accountant Menu Items -->

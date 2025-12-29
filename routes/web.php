@@ -96,12 +96,6 @@ Route::middleware(['auth','role:admin'])->prefix('admin')->group(function () {
     Route::patch('support-attendances/{supportAttendance}/finish-time', [AdminSupportAttendanceController::class, 'updateFinishTime'])->name('support-attendances.finish-time');
     Route::get('package-notifications', [AdminPackageNotificationsController::class, 'index'])->name('admin.package-notifications.index');
     Route::post('package-notifications/{package}/mark-paid', [AdminPackageNotificationsController::class, 'markAsPaid'])->name('admin.package-notifications.mark-paid');
-    
-    // Settings
-    Route::get('settings', [AdminSettingsController::class, 'index'])->name('admin.settings.index');
-    Route::post('settings/support-names', [AdminSettingsController::class, 'storeSupportName'])->name('admin.settings.support-names.store');
-    Route::put('settings/support-names/{supportName}', [AdminSettingsController::class, 'updateSupportName'])->name('admin.settings.support-names.update');
-    Route::delete('settings/support-names/{supportName}', [AdminSettingsController::class, 'destroySupportName'])->name('admin.settings.support-names.destroy');
 });
 
 // Support-only routes (families, timetables, etc. - shared with admin but defined here to avoid conflicts)
@@ -134,6 +128,12 @@ Route::middleware(['auth','role:admin|support'])->prefix('admin')->group(functio
     Route::resource('timezone-adjustments', AdminTimezoneAdjustmentController::class)->only(['index', 'store']);
     Route::resource('support-attendances', AdminSupportAttendanceController::class)->only(['index', 'store', 'update', 'destroy']);
     Route::patch('support-attendances/{supportAttendance}/finish-time', [AdminSupportAttendanceController::class, 'updateFinishTime'])->name('support-attendances.finish-time');
+    
+    // Settings - accessible by admin and support
+    Route::get('settings', [AdminSettingsController::class, 'index'])->name('admin.settings.index');
+    Route::post('settings/support-names', [AdminSettingsController::class, 'storeSupportName'])->name('admin.settings.support-names.store');
+    Route::put('settings/support-names/{supportName}', [AdminSettingsController::class, 'updateSupportName'])->name('admin.settings.support-names.update');
+    Route::delete('settings/support-names/{supportName}', [AdminSettingsController::class, 'destroySupportName'])->name('admin.settings.support-names.destroy');
 });
 
 // Accountant and Admin routes (packages, billings, salaries)

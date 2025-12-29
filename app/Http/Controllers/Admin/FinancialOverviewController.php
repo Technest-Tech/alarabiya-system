@@ -7,6 +7,7 @@ use App\Http\Requests\Admin\StoreAccountantSalaryRequest;
 use App\Http\Requests\Admin\StoreSupportSalaryRequest;
 use App\Models\AccountantSalary;
 use App\Models\Billing;
+use App\Models\Student;
 use App\Models\SupportName;
 use App\Models\SupportSalary;
 use App\Models\TeacherSalary;
@@ -53,6 +54,13 @@ class FinancialOverviewController extends Controller
         
         $start = Carbon::parse($fromDate)->startOfDay();
         $end = Carbon::parse($toDate)->endOfDay();
+
+        // Get total revenue from all student packages (collected money)
+        $revenueByCurrency = Student::get()->groupBy(function($student) {
+            return $student->currency ?? 'USD';
+        })->map(function ($students) {
+            return $students->sum(fn($s) => $s->package_hours_total * $s->hourly_rate);
+        })->sortKeys();
 
         // Get income from billings
         $billings = Billing::whereDate('month', '>=', $start->toDateString())
@@ -163,6 +171,12 @@ class FinancialOverviewController extends Controller
             return $amount * $rate;
         };
 
+        // Calculate total revenue in EGP
+        $totalRevenueEGP = 0;
+        foreach ($revenueByCurrency as $currency => $amount) {
+            $totalRevenueEGP += $convertToEGP($amount, $currency);
+        }
+
         // Convert all amounts to EGP for unified statistics
         $totalIncomeEGP = 0;
         $totalPaidIncomeEGP = 0;
@@ -261,6 +275,8 @@ class FinancialOverviewController extends Controller
             'conversionRates' => $conversionRates,
             'availableCurrencies' => $availableCurrencies,
             'availableMonths' => $availableMonths,
+            'revenueByCurrency' => $revenueByCurrency,
+            'totalRevenue' => $totalRevenueEGP,
             'incomeByCurrency' => $incomeByCurrencyConverted,
             'expensesByCurrency' => $expensesByCurrencyConverted,
             'netByCurrency' => $netByCurrency,

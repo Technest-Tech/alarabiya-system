@@ -39,3 +39,80 @@
 .fc-event-card .fc-event-meta {
     @apply text-[11px] text-indigo-500 dark:text-indigo-200/80;
 }
+
+/* Status-based event colors - override FullCalendar default background */
+.fc-event.fc-event-scheduled {
+    --fc-event-bg-color: rgb(238 242 255) !important;
+    --fc-event-border-color: rgb(199 210 254) !important;
+    background-color: rgb(238 242 255) !important;
+}
+
+.fc-event.fc-event-scheduled .fc-event-card {
+    @apply border-indigo-200 bg-indigo-50 text-indigo-700 dark:border-indigo-800 dark:bg-indigo-900/40 dark:text-indigo-200;
+}
+
+.fc-event.fc-event-cancelled {
+    --fc-event-bg-color: rgb(254 242 242) !important;
+    --fc-event-border-color: rgb(254 202 202) !important;
+    background-color: rgb(254 242 242) !important;
+}
+
+.fc-event.fc-event-cancelled .fc-event-card {
+    @apply border-red-200 bg-red-50 text-red-700 dark:border-red-800 dark:bg-red-900/40 dark:text-red-200;
+}
+
+.fc-event.fc-event-absent {
+    --fc-event-bg-color: rgb(255 247 237) !important;
+    --fc-event-border-color: rgb(254 215 170) !important;
+    background-color: rgb(255 247 237) !important;
+}
+
+.fc-event.fc-event-absent .fc-event-card {
+    @apply border-orange-200 bg-orange-50 text-orange-700 dark:border-orange-800 dark:bg-orange-900/40 dark:text-orange-200;
+}
+
+.fc-event.fc-event-attended {
+    --fc-event-bg-color: rgb(240 253 244) !important;
+    --fc-event-border-color: rgb(187 247 208) !important;
+    background-color: rgb(240 253 244) !important;
+}
+
+.fc-event.fc-event-attended .fc-event-card {
+    @apply border-green-200 bg-green-50 text-green-700 dark:border-green-800 dark:bg-green-900/40 dark:text-green-200;
+}
+
+.fc-event.fc-event-rescheduled {
+    --fc-event-bg-color: rgb(254 252 232) !important;
+    --fc-event-border-color: rgb(254 240 138) !important;
+    background-color: rgb(254 252 232) !important;
+}
+
+.fc-event.fc-event-rescheduled .fc-event-card {
+    @apply border-yellow-200 bg-yellow-50 text-yellow-700 dark:border-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-200;
+}
+
+/* Dark mode overrides */
+.dark .fc-event.fc-event-scheduled {
+    --fc-event-bg-color: rgb(30 27 75 / 0.4) !important;
+    background-color: rgb(30 27 75 / 0.4) !important;
+}
+
+.dark .fc-event.fc-event-cancelled {
+    --fc-event-bg-color: rgb(127 29 29 / 0.4) !important;
+    background-color: rgb(127 29 29 / 0.4) !important;
+}
+
+.dark .fc-event.fc-event-absent {
+    --fc-event-bg-color: rgb(154 52 18 / 0.4) !important;
+    background-color: rgb(154 52 18 / 0.4) !important;
+}
+
+.dark .fc-event.fc-event-attended {
+    --fc-event-bg-color: rgb(20 83 45 / 0.4) !important;
+    background-color: rgb(20 83 45 / 0.4) !important;
+}
+
+.dark .fc-event.fc-event-rescheduled {
+    --fc-event-bg-color: rgb(113 63 18 / 0.4) !important;
+    background-color: rgb(113 63 18 / 0.4) !important;
+}

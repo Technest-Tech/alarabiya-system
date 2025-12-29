@@ -100,6 +100,17 @@ export function initTimetableCalendar(element) {
         eventContent(arg) {
             return { html: eventHtml(arg) };
         },
+        eventClassNames(arg) {
+            const status = arg.event.extendedProps.status || 'scheduled';
+            const statusClasses = {
+                'scheduled': 'fc-event-scheduled',
+                'cancelled': 'fc-event-cancelled',
+                'absent': 'fc-event-absent',
+                'attended': 'fc-event-attended',
+                'rescheduled': 'fc-event-rescheduled',
+            };
+            return statusClasses[status] || 'fc-event-scheduled';
+        },
         datesSet(info) {
             element.dataset.viewStart = info.startStr;
             element.dataset.viewEnd = info.endStr;

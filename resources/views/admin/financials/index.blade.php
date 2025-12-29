@@ -58,6 +58,17 @@
         <!-- Statistics Cards -->
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <div class="rounded-lg border border-gray-200 dark:border-gray-700 p-6 bg-white dark:bg-gray-800">
+                <p class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Total Revenue (Collected Money)</p>
+                <p class="mt-2 text-3xl font-bold text-yellow-600 dark:text-yellow-400">
+                    EGP {{ number_format($totalRevenue, 2) }}
+                </p>
+                <div class="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                    From all student packages
+                </div>
+                <p class="mt-1 text-xs text-gray-400 dark:text-gray-500 italic">(All currencies converted to EGP)</p>
+            </div>
+            
+            <div class="rounded-lg border border-gray-200 dark:border-gray-700 p-6 bg-white dark:bg-gray-800">
                 <p class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Total Income</p>
                 <p class="mt-2 text-3xl font-bold text-green-600 dark:text-green-400">
                     EGP {{ number_format($totalIncome, 2) }}
@@ -116,6 +127,41 @@
                 @endif
             </div>
         </div>
+
+        <!-- Revenue by Currency Section -->
+        @if($revenueByCurrency->isNotEmpty())
+            <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-sm overflow-hidden">
+                <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+                    <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Total Revenue by Currency (Collected Money)</h3>
+                    <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Total revenue from all student packages</p>
+                </div>
+                <div class="p-6">
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                        @foreach($revenueByCurrency as $currency => $total)
+                            <div class="rounded-lg border border-gray-200 dark:border-gray-700 p-4 bg-gray-50 dark:bg-gray-900/50">
+                                <p class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">Total Revenue ({{ $currency }})</p>
+                                <p class="text-xl font-bold text-yellow-600 dark:text-yellow-400">
+                                    {{ $currency }} {{ number_format($total, 2) }}
+                                </p>
+                                @php
+                                    if ($currency === 'EGP') {
+                                        $totalEGP = $total;
+                                    } else {
+                                        $rate = $conversionRates[$currency] ?? null;
+                                        $totalEGP = $rate ? $total * $rate : null;
+                                    }
+                                @endphp
+                                @if($totalEGP !== null && ($currency === 'EGP' || (isset($conversionRates[$currency]) && $conversionRates[$currency] > 0)))
+                                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                                        EGP {{ number_format($totalEGP, 2) }}
+                                    </p>
+                                @endif
+                            </div>
+                        @endforeach
+                    </div>
+                </div>
+            </div>
+        @endif
 
         <!-- Summary Cards by Currency -->
         @php

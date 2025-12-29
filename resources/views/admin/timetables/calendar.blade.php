@@ -10,7 +10,10 @@
             studentId: '{{ $studentFilter }}',
             teacherId: '{{ $teacherFilter }}',
             exportUrl: '{{ route('timetables.export') }}',
-            teachers: {{ $teacherLookup->toJson(JSON_FORCE_OBJECT | JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT) }}
+            teachers: {{ $teacherLookup->toJson(JSON_FORCE_OBJECT | JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT) }},
+            cancelUrl: '{{ route('today-lessons.cancel', '__EVENT__') }}',
+            absentUrl: '{{ route('today-lessons.absent', '__EVENT__') }}',
+            attendedUrl: '{{ route('today-lessons.attended', '__EVENT__') }}'
         })"
         class="space-y-6"
     >
@@ -146,7 +149,20 @@
 
                 <div class="space-y-6 px-6 py-6">
                     <div class="rounded-xl bg-indigo-50 px-4 py-3 text-sm text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-200">
-                        <div class="font-semibold" x-text="form.course_name || selectedEvent.course_name"></div>
+                        <div class="flex items-center justify-between">
+                            <div class="font-semibold" x-text="form.course_name || selectedEvent.course_name"></div>
+                            <span 
+                                class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
+                                :class="{
+                                    'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-300': selectedEvent.status === 'scheduled',
+                                    'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-300': selectedEvent.status === 'cancelled',
+                                    'bg-orange-100 text-orange-800 dark:bg-orange-900/20 dark:text-orange-300': selectedEvent.status === 'absent',
+                                    'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300': selectedEvent.status === 'attended',
+                                    'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-300': selectedEvent.status === 'rescheduled',
+                                }"
+                                x-text="selectedEvent.status ? selectedEvent.status.charAt(0).toUpperCase() + selectedEvent.status.slice(1) : 'Scheduled'"
+                            ></span>
+                        </div>
                         <div class="mt-1 flex flex-wrap gap-4 text-xs">
                             <span class="flex items-center gap-2">
                                 <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -179,6 +195,60 @@
                                     </svg>
                                     <span><span class="font-semibold">Student time:</span> <span x-text="selectedEvent.studentTime"></span></span>
                                 </span>
+                            </template>
+                        </div>
+                    </div>
+
+                    <!-- Status Actions -->
+                    <div class="rounded-xl border border-gray-200 bg-gray-50 px-4 py-4 dark:border-gray-700 dark:bg-gray-800/50">
+                        <h3 class="mb-3 text-sm font-semibold text-gray-900 dark:text-white">Quick Actions</h3>
+                        <div class="flex flex-wrap items-center gap-3">
+                            <template x-if="selectedEvent.status !== 'cancelled'">
+                                <button 
+                                    type="button"
+                                    @click="handleStatusAction('cancel')"
+                                    aria-label="Cancel lesson" 
+                                    title="Cancel" 
+                                    class="inline-flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm font-medium text-red-600 transition hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-red-400 dark:border-red-800 dark:bg-red-900/20 dark:text-red-200 dark:hover:bg-red-900/30"
+                                >
+                                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                    </svg>
+                                    Cancel
+                                </button>
+                            </template>
+                            <template x-if="selectedEvent.status !== 'absent'">
+                                <button 
+                                    type="button"
+                                    @click="handleStatusAction('absent')"
+                                    aria-label="Mark lesson as absent" 
+                                    title="Mark as absent" 
+                                    class="inline-flex items-center gap-2 rounded-lg border border-orange-200 bg-orange-50 px-3 py-2 text-sm font-medium text-orange-600 transition hover:bg-orange-100 focus:outline-none focus:ring-2 focus:ring-orange-400 dark:border-orange-800 dark:bg-orange-900/20 dark:text-orange-200 dark:hover:bg-orange-900/30"
+                                >
+                                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                    Mark as Absent
+                                </button>
+                            </template>
+                            <template x-if="selectedEvent.status !== 'attended'">
+                                <button 
+                                    type="button"
+                                    @click="handleStatusAction('attended')"
+                                    aria-label="Mark lesson as attended" 
+                                    title="Mark as attended" 
+                                    class="inline-flex items-center gap-2 rounded-lg border border-green-200 bg-green-50 px-3 py-2 text-sm font-medium text-green-600 transition hover:bg-green-100 focus:outline-none focus:ring-2 focus:ring-green-400 dark:border-green-800 dark:bg-green-900/20 dark:text-green-200 dark:hover:bg-green-900/30"
+                                >
+                                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                    Mark as Attended
+                                </button>
+                            </template>
+                            <template x-if="selectedEvent.status === 'cancelled' || selectedEvent.status === 'absent' || selectedEvent.status === 'attended'">
+                                <p class="text-xs text-gray-500 dark:text-gray-400 italic">
+                                    This lesson has already been marked. Change the status using a different action above.
+                                </p>
                             </template>
                         </div>
                     </div>
@@ -605,7 +675,7 @@
 
     <script>
         document.addEventListener('alpine:init', () => {
-            Alpine.data('calendarPage', ({ studentId, teacherId, exportUrl, teachers }) => ({
+            Alpine.data('calendarPage', ({ studentId, teacherId, exportUrl, teachers, cancelUrl, absentUrl, attendedUrl }) => ({
                 eventModalOpen: false,
                 addLessonModalOpen: false,
                 exportModalOpen: false,
@@ -647,10 +717,14 @@
                     displayDate: '',
                     displayTime: '',
                     studentTime: '',
+                    status: 'scheduled',
                 },
                 errors: [],
                 csrf: document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
                 exportUrl,
+                cancelUrl,
+                absentUrl,
+                attendedUrl,
                 exportPreset: 'month',
                 customRange: {
                     start: '',
@@ -698,6 +772,7 @@
                         displayDate: dateFormatter.format(new Date(detail.start)),
                         displayTime: `${timeFormatter.format(new Date(detail.start))} – ${timeFormatter.format(new Date(detail.end))}`,
                         studentTime,
+                        status: detail.extendedProps.status || 'scheduled',
                     };
 
                     this.form = {
@@ -975,6 +1050,70 @@
 
                 closeEventModal() {
                     this.eventModalOpen = false;
+                },
+
+                async handleStatusAction(action) {
+                    if (!this.selectedEvent.id) return;
+
+                    const actionMessages = {
+                        cancel: 'Are you sure you want to cancel this lesson?',
+                        absent: 'Mark this lesson as absent?',
+                        attended: 'Mark this lesson as attended?',
+                    };
+
+                    const successMessages = {
+                        cancel: 'Lesson cancelled successfully.',
+                        absent: 'Lesson marked as absent.',
+                        attended: 'Lesson marked as attended.',
+                    };
+
+                    const urlMap = {
+                        cancel: this.cancelUrl,
+                        absent: this.absentUrl,
+                        attended: this.attendedUrl,
+                    };
+
+                    if (!confirm(actionMessages[action])) {
+                        return;
+                    }
+
+                    try {
+                        const url = urlMap[action].replace('__EVENT__', this.selectedEvent.id);
+                        const formData = new FormData();
+                        formData.append('_token', this.csrf);
+                        formData.append('_method', 'POST');
+
+                        const response = await fetch(url, {
+                            method: 'POST',
+                            headers: {
+                                'X-CSRF-TOKEN': this.csrf,
+                                'X-Requested-With': 'XMLHttpRequest',
+                            },
+                            body: formData,
+                        });
+
+                        // Handle both success (200) and redirect (302) responses
+                        if (!response.ok && response.status !== 302) {
+                            try {
+                                const data = await response.json();
+                                this.errors = [data.message || `Unable to ${action} the lesson.`];
+                            } catch (e) {
+                                this.errors = [`Unable to ${action} the lesson.`];
+                            }
+                            return;
+                        }
+
+                        // Update the status in the modal immediately
+                        this.selectedEvent.status = action === 'cancel' ? 'cancelled' : action;
+                        
+                        // Refresh the calendar to show updated status
+                        window.dispatchEvent(new CustomEvent('timetable:refresh'));
+                        this.showToast(successMessages[action]);
+                        // Keep modal open so user can see the status change
+                    } catch (error) {
+                        this.errors = [`Unexpected error ${action}ing the lesson.`];
+                        console.error(error);
+                    }
                 },
 
                 showToast(message) {
