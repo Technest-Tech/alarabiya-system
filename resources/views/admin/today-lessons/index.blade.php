@@ -106,43 +106,37 @@
                     </thead>
                     <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                         @forelse($events as $event)
-                            <tr class="transition-colors group
-                                @if($event['status'] === 'cancelled') bg-red-50/50 dark:bg-red-900/10 hover:bg-red-100/50 dark:hover:bg-red-900/20
-                                @elseif($event['status'] === 'absent') bg-orange-50/50 dark:bg-orange-900/10 hover:bg-orange-100/50 dark:hover:bg-orange-900/20
-                                @elseif($event['status'] === 'rescheduled') bg-yellow-50/50 dark:bg-yellow-900/10 hover:bg-yellow-100/50 dark:hover:bg-yellow-900/20
-                                @elseif($event['status'] === 'attended') bg-green-50/50 dark:bg-green-900/10 hover:bg-green-100/50 dark:hover:bg-green-900/20
-                                @else hover:bg-gray-50 dark:hover:bg-gray-700/50
-                                @endif">
+                            <tr class="transition-colors group @if($event['status'] === 'cancelled') bg-red-200 dark:bg-red-900/60 hover:bg-red-300 dark:hover:bg-red-900/80 @elseif($event['status'] === 'absent') bg-orange-200 dark:bg-orange-900/60 hover:bg-orange-300 dark:hover:bg-orange-900/80 @elseif($event['status'] === 'rescheduled') bg-yellow-200 dark:bg-yellow-900/60 hover:bg-yellow-300 dark:hover:bg-yellow-900/80 @elseif($event['status'] === 'attended') bg-green-200 dark:bg-green-900/60 hover:bg-green-300 dark:hover:bg-green-900/80 @else hover:bg-gray-50 dark:hover:bg-gray-700/50 @endif">
                                 <td class="px-6 py-4 whitespace-nowrap">
-                                    <div class="text-sm font-medium text-gray-900 dark:text-white">
+                                    <div class="text-base font-medium text-gray-900 dark:text-white">
                                         {{ $event['start_at']->format('M d, Y') }}
                                     </div>
-                                    <div class="text-xs text-gray-500 dark:text-gray-400">
+                                    <div class="text-sm text-gray-500 dark:text-gray-400">
                                         {{ $event['start_at']->format('l') }}
                                     </div>
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap">
-                                    <div class="text-sm font-medium text-gray-900 dark:text-white">
+                                    <div class="text-base font-medium text-gray-900 dark:text-white">
                                         {{ $event['time'] }}
                                     </div>
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap">
-                                    <div class="text-sm font-semibold text-gray-900 dark:text-white">{{ $event['student'] }}</div>
-                                    <div class="text-xs text-gray-500 dark:text-gray-400">
+                                    <div class="text-base font-semibold text-gray-900 dark:text-white">{{ $event['student'] }}</div>
+                                    <div class="text-sm text-gray-500 dark:text-gray-400">
                                         {{ $event['student_timezone'] }} • {{ $event['student_time'] }}
                                     </div>
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap">
-                                    <div class="text-sm font-semibold text-gray-900 dark:text-white">{{ $event['teacher'] ?? '—' }}</div>
-                                    <div class="text-xs text-gray-500 dark:text-gray-400">
+                                    <div class="text-base font-semibold text-gray-900 dark:text-white">{{ $event['teacher'] ?? '—' }}</div>
+                                    <div class="text-sm text-gray-500 dark:text-gray-400">
                                         {{ $event['teacher_timezone'] }} • {{ $event['teacher_time'] }}
                                     </div>
                                 </td>
                                 <td class="px-6 py-4">
-                                    <div class="text-sm text-gray-900 dark:text-white">{{ $event['course_name'] }}</div>
+                                    <div class="text-base text-gray-900 dark:text-white">{{ $event['course_name'] }}</div>
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap">
-                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium 
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-medium 
                                         @if($event['status'] === 'scheduled') bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-300
                                         @elseif($event['status'] === 'cancelled') bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-300
                                         @elseif($event['status'] === 'rescheduled') bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-300
@@ -153,15 +147,9 @@
                                         {{ ucfirst($event['status']) }}
                                     </span>
                                 </td>
-                                <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium sticky right-0 z-10 border-l border-gray-200 dark:border-gray-600
-                                    @if($event['status'] === 'cancelled') bg-red-50/50 dark:bg-red-900/10 group-hover:bg-red-100/50 dark:group-hover:bg-red-900/20
-                                    @elseif($event['status'] === 'absent') bg-orange-50/50 dark:bg-orange-900/10 group-hover:bg-orange-100/50 dark:group-hover:bg-orange-900/20
-                                    @elseif($event['status'] === 'rescheduled') bg-yellow-50/50 dark:bg-yellow-900/10 group-hover:bg-yellow-100/50 dark:group-hover:bg-yellow-900/20
-                                    @elseif($event['status'] === 'attended') bg-green-50/50 dark:bg-green-900/10 group-hover:bg-green-100/50 dark:group-hover:bg-green-900/20
-                                    @else bg-white dark:bg-gray-800 group-hover:bg-gray-50 dark:group-hover:bg-gray-700/50
-                                    @endif">
+                                <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium sticky right-0 z-10 border-l border-gray-200 dark:border-gray-600 @if($event['status'] === 'cancelled') bg-red-200 dark:bg-red-900/60 group-hover:bg-red-300 dark:group-hover:bg-red-900/80 @elseif($event['status'] === 'absent') bg-orange-200 dark:bg-orange-900/60 group-hover:bg-orange-300 dark:group-hover:bg-orange-900/80 @elseif($event['status'] === 'rescheduled') bg-yellow-200 dark:bg-yellow-900/60 group-hover:bg-yellow-300 dark:group-hover:bg-yellow-900/80 @elseif($event['status'] === 'attended') bg-green-200 dark:bg-green-900/60 group-hover:bg-green-300 dark:group-hover:bg-green-900/80 @else bg-white dark:bg-gray-800 group-hover:bg-gray-50 dark:group-hover:bg-gray-700/50 @endif">
                                     <div class="flex items-center justify-end space-x-2">
-                                        <div class="relative group">
+                                        <div class="relative group/button">
                                             <button
                                                 type="button"
                                                 aria-label="Reschedule lesson"
@@ -173,20 +161,20 @@
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                                                 </svg>
                                             </button>
-                                            <span class="pointer-events-none absolute -top-2 left-1/2 -translate-x-1/2 -translate-y-full whitespace-nowrap rounded-md bg-gray-900 px-2 py-1 text-xs font-medium text-white opacity-0 transition group-hover:opacity-100 group-focus-within:opacity-100 dark:bg-gray-700">
+                                            <span class="pointer-events-none absolute -top-2 left-1/2 -translate-x-1/2 -translate-y-full whitespace-nowrap rounded-md bg-gray-900 px-2 py-1 text-sm font-medium text-white opacity-0 transition group-hover/button:opacity-100 group-focus-within/button:opacity-100 dark:bg-gray-700">
                                                 Reschedule
                                             </span>
                                         </div>
                                         <form action="{{ route('today-lessons.cancel', $event['id']) }}" method="POST" class="inline" onsubmit="return confirm('Are you sure you want to cancel this lesson?')">
                                             @csrf
                                             @method('POST')
-                                            <div class="relative group">
+                                            <div class="relative group/button">
                                                 <button type="submit" aria-label="Cancel lesson" title="Cancel" class="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300 transition-colors">
                                                     <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                                                     </svg>
                                                 </button>
-                                                <span class="pointer-events-none absolute -top-2 left-1/2 -translate-x-1/2 -translate-y-full whitespace-nowrap rounded-md bg-gray-900 px-2 py-1 text-xs font-medium text-white opacity-0 transition group-hover:opacity-100 group-focus-within:opacity-100 dark:bg-gray-700">
+                                                <span class="pointer-events-none absolute -top-2 left-1/2 -translate-x-1/2 -translate-y-full whitespace-nowrap rounded-md bg-gray-900 px-2 py-1 text-sm font-medium text-white opacity-0 transition group-hover/button:opacity-100 group-focus-within/button:opacity-100 dark:bg-gray-700">
                                                     Cancel
                                                 </span>
                                             </div>
@@ -194,13 +182,13 @@
                                         <form action="{{ route('today-lessons.absent', $event['id']) }}" method="POST" class="inline" onsubmit="return confirm('Mark this lesson as absent?')">
                                             @csrf
                                             @method('POST')
-                                            <div class="relative group">
+                                            <div class="relative group/button">
                                                 <button type="submit" aria-label="Mark lesson as absent" title="Mark as absent" class="text-orange-600 hover:text-orange-900 dark:text-orange-400 dark:hover:text-orange-300 transition-colors">
                                                     <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                                                     </svg>
                                                 </button>
-                                                <span class="pointer-events-none absolute -top-2 left-1/2 -translate-x-1/2 -translate-y-full whitespace-nowrap rounded-md bg-gray-900 px-2 py-1 text-xs font-medium text-white opacity-0 transition group-hover:opacity-100 group-focus-within:opacity-100 dark:bg-gray-700">
+                                                <span class="pointer-events-none absolute -top-2 left-1/2 -translate-x-1/2 -translate-y-full whitespace-nowrap rounded-md bg-gray-900 px-2 py-1 text-sm font-medium text-white opacity-0 transition group-hover/button:opacity-100 group-focus-within/button:opacity-100 dark:bg-gray-700">
                                                     Mark as absent
                                                 </span>
                                             </div>
@@ -208,13 +196,13 @@
                                         <form action="{{ route('today-lessons.attended', $event['id']) }}" method="POST" class="inline" onsubmit="return confirm('Mark this lesson as attended?')">
                                             @csrf
                                             @method('POST')
-                                            <div class="relative group">
+                                            <div class="relative group/button">
                                                 <button type="submit" aria-label="Mark lesson as attended" title="Mark as attended" class="text-green-600 hover:text-green-900 dark:text-green-400 dark:hover:text-green-300 transition-colors">
                                                     <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                                                     </svg>
                                                 </button>
-                                                <span class="pointer-events-none absolute -top-2 left-1/2 -translate-x-1/2 -translate-y-full whitespace-nowrap rounded-md bg-gray-900 px-2 py-1 text-xs font-medium text-white opacity-0 transition group-hover:opacity-100 group-focus-within:opacity-100 dark:bg-gray-700">
+                                                <span class="pointer-events-none absolute -top-2 left-1/2 -translate-x-1/2 -translate-y-full whitespace-nowrap rounded-md bg-gray-900 px-2 py-1 text-sm font-medium text-white opacity-0 transition group-hover/button:opacity-100 group-focus-within/button:opacity-100 dark:bg-gray-700">
                                                     Mark as attended
                                                 </span>
                                             </div>

@@ -6,7 +6,20 @@
                 <h2 class="text-2xl font-bold text-gray-900 dark:text-white">Student Packages</h2>
                 <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">View and manage all student packages</p>
             </div>
-            <form class="mt-4 sm:mt-0 flex items-center space-x-3">
+            <form class="mt-4 sm:mt-0 flex flex-wrap items-center gap-3" method="GET" action="{{ route('admin.packages.index') }}">
+                <div class="relative flex-1 min-w-[200px]">
+                    <input type="text" 
+                           id="search-input"
+                           name="search" 
+                           value="{{ $search ?? '' }}" 
+                           placeholder="Search by student name..." 
+                           class="w-full px-4 py-2 pl-10 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    <svg class="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                </div>
+                <input type="hidden" name="month" value="{{ $month }}">
+                <input type="hidden" name="year" value="{{ $year }}">
                 <select name="month" onchange="this.form.submit()" class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500">
                     @for($m=1;$m<=12;$m++)
                         <option value="{{ $m }}" @selected($m==$month)>{{ DateTime::createFromFormat('!m', $m)->format('F') }}</option>
@@ -17,6 +30,12 @@
                         <option value="{{ $y }}" @selected($y==$year)>{{ $y }}</option>
                     @endfor
                 </select>
+                @if($search ?? '')
+                    <a href="{{ route('admin.packages.index', ['month' => $month, 'year' => $year]) }}" 
+                       class="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white">
+                        Clear
+                    </a>
+                @endif
             </form>
         </div>
 
@@ -131,4 +150,21 @@
             </div>
         @endif
     </div>
+
+    <script>
+        (function() {
+            const searchInput = document.getElementById('search-input');
+            const form = searchInput?.closest('form');
+            let debounceTimer;
+
+            if (searchInput && form) {
+                searchInput.addEventListener('input', function() {
+                    clearTimeout(debounceTimer);
+                    debounceTimer = setTimeout(function() {
+                        form.submit();
+                    }, 300); // Wait 300ms after user stops typing
+                });
+            }
+        })();
+    </script>
 </x-app-layout>

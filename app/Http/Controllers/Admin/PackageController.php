@@ -17,10 +17,18 @@ class PackageController extends Controller
     {
         $month = (int) $request->get('month', now()->month);
         $year = (int) $request->get('year', now()->year);
-        $students = Student::with(['teacher.user', 'currentPackage', 'packages' => function($query) {
+        $search = $request->get('search', '');
+        
+        $query = Student::with(['teacher.user', 'currentPackage', 'packages' => function($query) {
             $query->whereIn('status', ['completed', 'paid']);
-        }])->orderBy('name')->get();
-        return view('admin.packages.index', compact('students','month','year'));
+        }]);
+        
+        if ($search) {
+            $query->where('name', 'like', '%' . $search . '%');
+        }
+        
+        $students = $query->orderBy('name')->get();
+        return view('admin.packages.index', compact('students','month','year','search'));
     }
 
     public function completedPackages(Student $student)
