@@ -125,12 +125,6 @@ class PackageService
         // This ensures all lessons are counted properly and avoids double-counting
         // The observer will also try to recalculate, but recalculatePackageLessons is idempotent
         $this->recalculatePackageLessons($package);
-
-            // Check if package is now exhausted after adding this lesson
-        $package->refresh();
-            if ($package->isExhausted()) {
-                $package->markAsCompleted();
-        }
     }
 
     /**
@@ -236,8 +230,24 @@ class PackageService
         // Update package hours_used (only calculated, non-trial lessons)
         $package->update(['hours_used' => $cumulativeMinutes]);
         
-        // If package was completed but is no longer exhausted, reactivate it
-        if ($package->status === 'completed' && !$package->isExhausted()) {
+        // Refresh package to get updated hours_used
+        $package->refresh();
+        
+        // Check if package has any pending lessons
+        $hasPendingLessons = Lesson::where('student_package_id', $package->id)
+            ->where('is_pending', true)
+            ->exists();
+        
+        // Check if package should be marked as completed
+        // A package is completed if either:
+        // 1. It has exhausted its hours (hours_used >= package_hours)
+        // 2. It has pending lessons (meaning hours have been exceeded)
+        if ($package->status === 'active' && ($package->isExhausted() || $hasPendingLessons)) {
+            $package->markAsCompleted();
+        }
+        
+        // If package was completed but is no longer exhausted and has no pending lessons, reactivate it
+        if ($package->status === 'completed' && !$package->isExhausted() && !$hasPendingLessons) {
             $package->update([
                 'status' => 'active',
                 'completed_at' => null,
