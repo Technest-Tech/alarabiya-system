@@ -16,22 +16,83 @@
 
         <!-- Filters & Summary -->
         <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0 sm:space-x-4">
-                <form class="flex items-center space-x-3">
-                    <select name="month" onchange="this.form.submit()" class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                        @for($m=1;$m<=12;$m++)
-                            <option value="{{ $m }}" @selected($m==$month)>{{ DateTime::createFromFormat('!m', $m)->format('F') }}</option>
-                        @endfor
-                    </select>
-                    <select name="year" onchange="this.form.submit()" class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                        @for($y=now()->year-2;$y<=now()->year+1;$y++)
-                            <option value="{{ $y }}" @selected($y==$year)>{{ $y }}</option>
-                        @endfor
-                    </select>
+            @if($studentId)
+                <div class="mb-4 px-4 py-2 bg-indigo-50 dark:bg-indigo-900/20 border-l-4 border-indigo-600 rounded">
+                    <p class="text-sm text-indigo-800 dark:text-indigo-200">
+                        <svg class="inline h-4 w-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        Showing all lessons from <strong>{{ $students->firstWhere('id', $studentId)?->name }}</strong>'s active and pending packages (month/year filters disabled)
+                    </p>
+                </div>
+            @endif
+            <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-4 lg:space-y-0 lg:space-x-4">
+                <form class="flex flex-wrap items-end gap-3">
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Month</label>
+                        <select name="month" onchange="this.form.submit()" class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 {{ $studentId ? 'opacity-50 cursor-not-allowed' : '' }}" {{ $studentId ? 'disabled' : '' }}>
+                            @for($m=1;$m<=12;$m++)
+                                <option value="{{ $m }}" @selected($m==$month)>{{ DateTime::createFromFormat('!m', $m)->format('F') }}</option>
+                            @endfor
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Year</label>
+                        <select name="year" onchange="this.form.submit()" class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 {{ $studentId ? 'opacity-50 cursor-not-allowed' : '' }}" {{ $studentId ? 'disabled' : '' }}>
+                            @for($y=now()->year-2;$y<=now()->year+1;$y++)
+                                <option value="{{ $y }}" @selected($y==$year)>{{ $y }}</option>
+                            @endfor
+                        </select>
+                    </div>
+                    <div class="min-w-[200px]" x-data="{
+                        open: false,
+                        search: '',
+                        selected: {{ $studentId ?? 'null' }},
+                        selectedName: '{{ $studentId ? $students->firstWhere('id', $studentId)?->name ?? 'All Students' : 'All Students' }}',
+                        students: {{ $students->map(fn($s) => ['id' => $s->id, 'name' => $s->name])->values()->toJson() }},
+                        get filteredStudents() {
+                            if (!this.search) return this.students;
+                            return this.students.filter(s => 
+                                s.name.toLowerCase().includes(this.search.toLowerCase())
+                            );
+                        }
+                    }" @click.away="open = false">
+                        <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Student</label>
+                        <input type="hidden" name="student_id" :value="selected">
+                        <div class="relative">
+                            <button type="button" @click="open = !open" class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 text-left flex items-center justify-between">
+                                <span x-text="selectedName" class="truncate"></span>
+                                <svg class="h-5 w-5 text-gray-400 flex-shrink-0 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                                </svg>
+                            </button>
+                            <div x-show="open" x-transition class="absolute z-50 mt-1 w-full bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg max-h-60 overflow-hidden">
+                                <div class="p-2 border-b border-gray-200 dark:border-gray-600">
+                                    <input type="text" x-model="search" placeholder="Search students..." class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" @click.stop>
+                                </div>
+                                <div class="max-h-48 overflow-y-auto">
+                                    <button type="button" @click="selected = null; selectedName = 'All Students'; open = false; $el.closest('form').submit()" class="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-600 text-gray-900 dark:text-white">
+                                        All Students
+                                    </button>
+                                    <template x-for="student in filteredStudents" :key="student.id">
+                                        <button type="button" @click="selected = student.id; selectedName = student.name; open = false; $el.closest('form').submit()" class="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-600 text-gray-900 dark:text-white" x-text="student.name"></button>
+                                    </template>
+                                    <div x-show="filteredStudents.length === 0" class="px-4 py-2 text-sm text-gray-500 dark:text-gray-400">
+                                        No students found
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    @if($studentId)
+                        <a href="{{ route('teacher.lessons.index', ['month' => $month, 'year' => $year]) }}" class="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-sm font-medium rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors">
+                            Clear Filter
+                        </a>
+                    @endif
                 </form>
                 <div class="flex items-center space-x-4">
                     <div class="text-right">
-                        <p class="text-sm text-gray-600 dark:text-gray-400">Total This Month</p>
+                        <p class="text-sm text-gray-600 dark:text-gray-400">{{ $studentId ? 'Total (Active Packages)' : 'Total This Month' }}</p>
                         <p class="text-2xl font-bold text-indigo-600 dark:text-indigo-400">{{ number_format($totalMinutes / 60, 1) }} hrs</p>
                     </div>
                     <div class="flex h-12 w-12 items-center justify-center rounded-lg bg-indigo-100 dark:bg-indigo-900/20">

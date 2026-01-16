@@ -12,10 +12,25 @@ class StudentController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    public function index(Request $request)
     {
-        $students = Student::with(['teacher', 'currentPackage'])->latest()->paginate(20);
-        return view('admin.students.index', compact('students'));
+        $search = $request->get('search', '');
+        
+        $query = Student::with(['teacher.user', 'currentPackage']);
+        
+        if ($search) {
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                  ->orWhere('whatsapp_number', 'like', "%{$search}%")
+                  ->orWhereHas('teacher.user', function ($q) use ($search) {
+                      $q->where('name', 'like', "%{$search}%");
+                  });
+            });
+        }
+        
+        $students = $query->latest()->paginate(20)->withQueryString();
+        
+        return view('admin.students.index', compact('students', 'search'));
     }
 
     /**

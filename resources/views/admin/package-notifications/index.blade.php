@@ -13,11 +13,14 @@
                            name="search" 
                            value="{{ $search ?? '' }}" 
                            placeholder="Search by student name..." 
-                           class="w-full px-4 py-2 pl-10 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                           class="w-full px-4 py-2 pl-10 pr-10 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500">
                     <svg class="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                     </svg>
                 </div>
+                <button type="submit" class="px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors">
+                    Search
+                </button>
                 @if($search ?? '')
                     <a href="{{ route('admin.package-notifications.index') }}" 
                        class="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white">
@@ -139,21 +142,5 @@
         @endif
     </div>
 
-    <script>
-        (function() {
-            const searchInput = document.getElementById('search-input');
-            const form = searchInput?.closest('form');
-            let debounceTimer;
-
-            if (searchInput && form) {
-                searchInput.addEventListener('input', function() {
-                    clearTimeout(debounceTimer);
-                    debounceTimer = setTimeout(function() {
-                        form.submit();
-                    }, 300); // Wait 300ms after user stops typing
-                });
-            }
-        })();
-    </script>
 </x-app-layout>
 

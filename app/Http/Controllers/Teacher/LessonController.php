@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Teacher;
 use App\Http\Controllers\Controller;
 use App\Models\Lesson;
 use App\Models\Student;
+use App\Models\StudentPackage;
 use App\Services\PackageService;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
@@ -24,21 +25,64 @@ class LessonController extends Controller
         $teacher = Auth::user()->teacher;
         $month = (int) request('month', now()->month);
         $year = (int) request('year', now()->year);
-        $lessons = Lesson::with(['student.currentPackage','studentPackage'])
-            ->where('teacher_id', $teacher->id)
-            ->whereYear('date', $year)
-            ->whereMonth('date', $month)
-            ->latest('date')
-            ->paginate(20);
-        $totalMinutes = Lesson::where('teacher_id', $teacher->id)
-            ->whereYear('date', $year)
-            ->whereMonth('date', $month)
-            ->sum('duration_minutes');
+        $studentId = request('student_id');
+        
+        $query = Lesson::with(['student.currentPackage','studentPackage'])
+            ->where('teacher_id', $teacher->id);
+        
+        // If student is selected, show all lessons from their active/pending packages
+        // Otherwise, filter by month/year
+        if ($studentId) {
+            $student = Student::find($studentId);
+            if ($student) {
+                // Get all active and completed (but not paid) package IDs for this student
+                $packageIds = StudentPackage::where('student_id', $studentId)
+                    ->whereIn('status', ['active', 'completed'])
+                    ->pluck('id');
+                
+                $query->where('student_id', $studentId)
+                    ->whereIn('student_package_id', $packageIds);
+            }
+        } else {
+            // Apply month/year filter only when no student is selected
+            $query->whereYear('date', $year)
+                ->whereMonth('date', $month);
+        }
+        
+        $lessons = $query->latest('date')->paginate(20);
+        
+        // Calculate total minutes with same logic
+        $totalMinutesQuery = Lesson::where('teacher_id', $teacher->id);
+        
+        if ($studentId) {
+            $student = Student::find($studentId);
+            if ($student) {
+                $packageIds = StudentPackage::where('student_id', $studentId)
+                    ->whereIn('status', ['active', 'completed'])
+                    ->pluck('id');
+                
+                $totalMinutesQuery->where('student_id', $studentId)
+                    ->whereIn('student_package_id', $packageIds);
+            }
+        } else {
+            $totalMinutesQuery->whereYear('date', $year)
+                ->whereMonth('date', $month);
+        }
+        
+        $totalMinutes = $totalMinutesQuery->sum('duration_minutes');
+        
+        // Get all students assigned to this teacher
+        $students = Student::where('assigned_teacher_id', $teacher->id)
+            ->orderBy('name')
+            ->get();
+        
         return view('teacher.lessons.index', [
             'lessons' => $lessons,
             'totalMinutes' => $totalMinutes,
             'month' => $month,
             'year' => $year,
+            'students' => $students,
+            'studentId' => $studentId,
         ]);
     }
 

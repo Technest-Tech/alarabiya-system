@@ -93,38 +93,111 @@ class PackageService
     /**
      * Assign lesson to package and calculate values
      * Only calculated lessons (attended, absent_student) that are not trial subtract from package hours
+     * If lesson exceeds package, it will be split into two lessons
      */
     public function assignLessonToPackage(Lesson $lesson, StudentPackage $package): void
     {
         // Refresh package to get latest hours_used
         $package->refresh();
         
-        $cumulativeHours = $this->calculateCumulativeHours($package, $lesson);
-        $lessonNumber = $this->getNextLessonNumber($package);
+        // Trial lessons never exhaust packages and don't need splitting
+        if ($lesson->isTrial() || !$lesson->isCalculated()) {
+            $cumulativeHours = $this->calculateCumulativeHours($package, $lesson);
+            $lessonNumber = $this->getNextLessonNumber($package);
+            
+            $lesson->update([
+                'student_package_id' => $package->id,
+                'package_cumulative_hours' => $cumulativeHours,
+                'is_pending' => false,
+                'package_lesson_number' => $lessonNumber,
+            ]);
+            
+            $this->recalculatePackageLessons($package);
+            return;
+        }
         
         // Calculate current hours_used to check if package would be exhausted
-        // Trial lessons never exhaust packages
         $currentHoursUsed = $package->hours_used;
-        $isExhausted = false;
-        if ($lesson->isCalculated() && !$lesson->isTrial()) {
-            // Check if adding this calculated, non-trial lesson would exhaust the package
-            $totalMinutesAfter = $currentHoursUsed + $lesson->duration_minutes;
-            $isExhausted = $totalMinutesAfter > ($package->package_hours * 60);
+        $packageMaxMinutes = $package->package_hours * 60;
+        $remainingMinutes = max(0, $packageMaxMinutes - $currentHoursUsed);
+        
+        // Check if lesson exceeds the remaining package hours
+        if ($lesson->duration_minutes > $remainingMinutes && $remainingMinutes > 0) {
+            // Split the lesson into two parts
+            // IMPORTANT: Save original duration before updating
+            $originalDurationMinutes = $lesson->duration_minutes;
+            
+            // Part 1: The portion that fits in the current package (not pending)
+            $part1Minutes = $remainingMinutes;
+            $cumulativeHours1 = $this->calculateCumulativeHours($package, $lesson);
+            $lessonNumber1 = $this->getNextLessonNumber($package);
+            
+            $lesson->update([
+                'student_package_id' => $package->id,
+                'duration_minutes' => $part1Minutes,
+                'package_cumulative_hours' => $cumulativeHours1,
+                'is_pending' => false,
+                'package_lesson_number' => $lessonNumber1,
+            ]);
+            
+            // Part 2: The remaining portion (pending)
+            // Use original duration, not the updated one
+            $part2Minutes = $originalDurationMinutes - $remainingMinutes;
+            
+            // Ensure we have a valid pending portion
+            if ($part2Minutes <= 0) {
+                // This shouldn't happen, but if it does, don't create a pending lesson
+                $this->recalculatePackageLessons($package);
+                $package->refresh();
+                if ($package->status === 'active' && ($package->isExhausted() || $package->lessons()->where('is_pending', true)->exists())) {
+                    $package->markAsCompleted();
+                }
+                return;
+            }
+            
+            // The pending lesson's cumulative should show the package is exhausted
+            $pendingLesson = Lesson::create([
+                'student_id' => $lesson->student_id,
+                'teacher_id' => $lesson->teacher_id,
+                'duration_minutes' => $part2Minutes,
+                'date' => $lesson->date,
+                'status' => $lesson->status,
+                'is_trial' => $lesson->is_trial,
+                'student_package_id' => $package->id, // Still assigned to this package for now
+                'is_pending' => true,
+                'package_lesson_number' => $lessonNumber1 + 1,
+                'package_cumulative_hours' => round($package->package_hours, 2), // Package is exhausted
+            ]);
+            
+            // Recalculate package lessons to set hours_used correctly
+            $this->recalculatePackageLessons($package);
+            
+            // Check if package should be marked as completed
+            $package->refresh();
+            if ($package->status === 'active' && ($package->isExhausted() || $package->lessons()->where('is_pending', true)->exists())) {
+                $package->markAsCompleted();
+            }
+        } else {
+            // Lesson fits entirely in the package
+            $cumulativeHours = $this->calculateCumulativeHours($package, $lesson);
+            $lessonNumber = $this->getNextLessonNumber($package);
+            
+            $lesson->update([
+                'student_package_id' => $package->id,
+                'package_cumulative_hours' => $cumulativeHours,
+                'is_pending' => false,
+                'package_lesson_number' => $lessonNumber,
+            ]);
+            
+            // Recalculate package lessons to set hours_used correctly
+            $this->recalculatePackageLessons($package);
+            
+            // Check if package should be marked as completed
+            $package->refresh();
+            if ($package->status === 'active' && ($package->isExhausted() || $package->lessons()->where('is_pending', true)->exists())) {
+                $package->markAsCompleted();
+            }
         }
-
-        // Always assign lesson to package (so it appears in package)
-        // Trial lessons are never pending since they don't count towards package
-        $lesson->update([
-            'student_package_id' => $package->id,
-            'package_cumulative_hours' => $cumulativeHours,
-            'is_pending' => $isExhausted, // Only true for calculated, non-trial lessons that exhaust package
-            'package_lesson_number' => $lessonNumber,
-        ]);
-
-        // Recalculate package lessons to set hours_used correctly
-        // This ensures all lessons are counted properly and avoids double-counting
-        // The observer will also try to recalculate, but recalculatePackageLessons is idempotent
-        $this->recalculatePackageLessons($package);
     }
 
     /**
@@ -139,7 +212,8 @@ class PackageService
             // Create new package
             $newPackage = $this->createPackage($package->student, $package->package_hours);
 
-            // Activate all pending lessons for this student
+            // Get all pending lessons for this student
+            // These are already split lessons, so we can move them directly
             $pendingLessons = Lesson::where('student_id', $package->student_id)
                 ->where('is_pending', true)
                 ->orderBy('date')
@@ -150,12 +224,14 @@ class PackageService
             $lessonNumber = 0;
 
             foreach ($pendingLessons as $lesson) {
+                $lessonNumber++;
+                
                 // Only count non-trial lessons towards cumulative and package hours
                 if (!$lesson->isTrial() && $lesson->isCalculated()) {
                     $cumulativeMinutes += $lesson->duration_minutes;
                 }
-                $lessonNumber++;
 
+                // Update lesson to new package
                 $lesson->update([
                     'student_package_id' => $newPackage->id,
                     'is_pending' => false,
@@ -168,6 +244,9 @@ class PackageService
                     $newPackage->increment('hours_used', $lesson->duration_minutes);
                 }
             }
+            
+            // Recalculate to ensure everything is correct
+            $this->recalculatePackageLessons($newPackage);
 
             // Check if new package is exhausted
             if ($newPackage->isExhausted()) {
