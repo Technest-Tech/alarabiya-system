@@ -24,7 +24,18 @@ class TodayLessonsController extends Controller
             'year' => $request->integer('year'),
             'student_id' => $request->integer('student_id'),
             'teacher_id' => $request->integer('teacher_id'),
+            'date' => $request->input('date'),
         ];
+
+        // Determine the selected date
+        $selectedDate = $now;
+        if ($filters['date']) {
+            try {
+                $selectedDate = Carbon::parse($filters['date'], $timezone);
+            } catch (\Exception $e) {
+                $selectedDate = $now;
+            }
+        }
 
         $query = TimetableEvent::with(['student', 'teacher.user', 'timetable'])
             ->when($filters['student_id'], fn ($q) => $q->where('student_id', $filters['student_id']))
@@ -34,10 +45,10 @@ class TodayLessonsController extends Controller
             $startOfPeriod = Carbon::create($filters['year'], $filters['month'], 1, 0, 0, 0, $timezone)->startOfMonth();
             $endOfPeriod = $startOfPeriod->copy()->endOfMonth();
         } else {
-            $startOfPeriod = $now->copy()->startOfDay();
-            $endOfPeriod = $now->copy()->endOfDay();
-            $filters['month'] = $now->month;
-            $filters['year'] = $now->year;
+            $startOfPeriod = $selectedDate->copy()->startOfDay();
+            $endOfPeriod = $selectedDate->copy()->endOfDay();
+            $filters['month'] = $selectedDate->month;
+            $filters['year'] = $selectedDate->year;
         }
 
         $events = $query
@@ -88,10 +99,19 @@ class TodayLessonsController extends Controller
                 ];
             });
 
+        // Calculate previous and next day
+        $previousDay = $selectedDate->copy()->subDay();
+        $nextDay = $selectedDate->copy()->addDay();
+        $isToday = $selectedDate->isToday();
+
         return view('admin.today-lessons.index', [
             'pageTitle' => "Today's Lessons",
             'events' => $events,
-            'today' => $now->format('F d, Y'),
+            'today' => $selectedDate->format('F d, Y'),
+            'selectedDate' => $selectedDate,
+            'previousDay' => $previousDay,
+            'nextDay' => $nextDay,
+            'isToday' => $isToday,
             'students' => Student::orderBy('name')->get(),
             'teachers' => Teacher::with('user')->get()->sortBy(fn (Teacher $teacher) => strtolower(optional($teacher->user)->name ?? '')),
             'filters' => $filters,
@@ -172,14 +192,28 @@ class TodayLessonsController extends Controller
             ->with('status', 'Lesson rescheduled successfully.');
     }
 
-    public function cancel(TimetableEvent $event): RedirectResponse
+    public function cancel(Request $request, TimetableEvent $event): RedirectResponse
     {
+        $cancelType = $request->input('cancel_type', 'cancelled');
+        
+        $status = match($cancelType) {
+            'student' => 'cancelled_student',
+            'teacher' => 'cancelled_teacher',
+            default => 'cancelled',
+        };
+
         $event->update([
-            'status' => 'cancelled',
+            'status' => $status,
         ]);
 
+        $message = match($cancelType) {
+            'student' => 'Lesson cancelled (Student).',
+            'teacher' => 'Lesson cancelled (Teacher).',
+            default => 'Lesson cancelled successfully.',
+        };
+
         return redirect()->route('today-lessons.index')
-            ->with('status', 'Lesson cancelled successfully.');
+            ->with('status', $message);
     }
 
     public function absent(TimetableEvent $event): RedirectResponse

@@ -2,9 +2,43 @@
     <div class="space-y-6">
         <!-- Header -->
         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between">
-            <div>
-                <h2 class="text-2xl font-bold text-gray-900 dark:text-white">Today's Lessons</h2>
-                <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">{{ $today }}</p>
+            <div class="flex items-center gap-4">
+                <a 
+                    href="{{ route('today-lessons.index', array_merge(request()->except(['date', 'page']), ['date' => $previousDay->format('Y-m-d')])) }}"
+                    class="flex items-center justify-center h-10 w-10 rounded-lg border border-gray-300 bg-white text-gray-700 shadow-sm transition hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+                    title="Previous Day ({{ $previousDay->format('M d, Y') }})"
+                >
+                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                    </svg>
+                </a>
+                <div>
+                    <h2 class="text-2xl font-bold text-gray-900 dark:text-white">Today's Lessons</h2>
+                    <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">
+                        {{ $today }}
+                        @if(!$isToday)
+                            <span class="ml-2 text-xs text-gray-500 dark:text-gray-400">(Not Today)</span>
+                        @endif
+                    </p>
+                </div>
+                <a 
+                    href="{{ route('today-lessons.index', array_merge(request()->except(['date', 'page']), ['date' => $nextDay->format('Y-m-d')])) }}"
+                    class="flex items-center justify-center h-10 w-10 rounded-lg border border-gray-300 bg-white text-gray-700 shadow-sm transition hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+                    title="Next Day ({{ $nextDay->format('M d, Y') }})"
+                >
+                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                    </svg>
+                </a>
+                @if(!$isToday)
+                    <a 
+                        href="{{ route('today-lessons.index', request()->except(['date', 'page'])) }}"
+                        class="inline-flex items-center px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg shadow-sm transition hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-700"
+                        title="Go to Today"
+                    >
+                        Today
+                    </a>
+                @endif
             </div>
         </div>
 
@@ -106,7 +140,7 @@
                     </thead>
                     <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                         @forelse($events as $event)
-                            <tr class="transition-colors group @if($event['status'] === 'cancelled') bg-red-200 dark:bg-red-900/60 hover:bg-red-300 dark:hover:bg-red-900/80 @elseif($event['status'] === 'absent') bg-orange-200 dark:bg-orange-900/60 hover:bg-orange-300 dark:hover:bg-orange-900/80 @elseif($event['status'] === 'rescheduled') bg-yellow-200 dark:bg-yellow-900/60 hover:bg-yellow-300 dark:hover:bg-yellow-900/80 @elseif($event['status'] === 'attended') bg-green-200 dark:bg-green-900/60 hover:bg-green-300 dark:hover:bg-green-900/80 @else hover:bg-gray-50 dark:hover:bg-gray-700/50 @endif">
+                            <tr class="transition-colors group @if($event['status'] === 'cancelled' || $event['status'] === 'cancelled_student' || $event['status'] === 'cancelled_teacher') bg-red-200 dark:bg-red-900/60 hover:bg-red-300 dark:hover:bg-red-900/80 @elseif($event['status'] === 'absent') bg-orange-200 dark:bg-orange-900/60 hover:bg-orange-300 dark:hover:bg-orange-900/80 @elseif($event['status'] === 'rescheduled') bg-yellow-200 dark:bg-yellow-900/60 hover:bg-yellow-300 dark:hover:bg-yellow-900/80 @elseif($event['status'] === 'attended') bg-green-200 dark:bg-green-900/60 hover:bg-green-300 dark:hover:bg-green-900/80 @else hover:bg-gray-50 dark:hover:bg-gray-700/50 @endif">
                                 <td class="px-6 py-4 whitespace-nowrap">
                                     <div class="text-base font-medium text-gray-900 dark:text-white">
                                         {{ $event['start_at']->format('M d, Y') }}
@@ -138,16 +172,22 @@
                                 <td class="px-6 py-4 whitespace-nowrap">
                                     <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-medium 
                                         @if($event['status'] === 'scheduled') bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-300
-                                        @elseif($event['status'] === 'cancelled') bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-300
+                                        @elseif($event['status'] === 'cancelled' || $event['status'] === 'cancelled_student' || $event['status'] === 'cancelled_teacher') bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-300
                                         @elseif($event['status'] === 'rescheduled') bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-300
                                         @elseif($event['status'] === 'absent') bg-orange-100 text-orange-800 dark:bg-orange-900/20 dark:text-orange-300
                                         @elseif($event['status'] === 'attended') bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300
                                         @else bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300
                                         @endif">
-                                        {{ ucfirst($event['status']) }}
+                                        @if($event['status'] === 'cancelled_student')
+                                            Cancelled (Student)
+                                        @elseif($event['status'] === 'cancelled_teacher')
+                                            Cancelled (Teacher)
+                                        @else
+                                            {{ ucfirst($event['status']) }}
+                                        @endif
                                     </span>
                                 </td>
-                                <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium sticky right-0 z-10 border-l border-gray-200 dark:border-gray-600 @if($event['status'] === 'cancelled') bg-red-200 dark:bg-red-900/60 group-hover:bg-red-300 dark:group-hover:bg-red-900/80 @elseif($event['status'] === 'absent') bg-orange-200 dark:bg-orange-900/60 group-hover:bg-orange-300 dark:group-hover:bg-orange-900/80 @elseif($event['status'] === 'rescheduled') bg-yellow-200 dark:bg-yellow-900/60 group-hover:bg-yellow-300 dark:group-hover:bg-yellow-900/80 @elseif($event['status'] === 'attended') bg-green-200 dark:bg-green-900/60 group-hover:bg-green-300 dark:group-hover:bg-green-900/80 @else bg-white dark:bg-gray-800 group-hover:bg-gray-50 dark:group-hover:bg-gray-700/50 @endif">
+                                <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium sticky right-0 z-10 border-l border-gray-200 dark:border-gray-600 @if($event['status'] === 'cancelled' || $event['status'] === 'cancelled_student' || $event['status'] === 'cancelled_teacher') bg-red-200 dark:bg-red-900 group-hover:bg-red-300 dark:group-hover:bg-red-800 @elseif($event['status'] === 'absent') bg-orange-200 dark:bg-orange-900 group-hover:bg-orange-300 dark:group-hover:bg-orange-800 @elseif($event['status'] === 'rescheduled') bg-yellow-200 dark:bg-yellow-900 group-hover:bg-yellow-300 dark:group-hover:bg-yellow-800 @elseif($event['status'] === 'attended') bg-green-200 dark:bg-green-900 group-hover:bg-green-300 dark:group-hover:bg-green-800 @else bg-white dark:bg-gray-800 group-hover:bg-gray-50 dark:group-hover:bg-gray-700 @endif">
                                     <div class="flex items-center justify-end space-x-2">
                                         <div class="relative group/button">
                                             <button
@@ -155,40 +195,54 @@
                                                 aria-label="Reschedule lesson"
                                                 title="Reschedule"
                                                 onclick="openRescheduleModal({{ $event['id'] }}, '{{ $event['start_at']->format('Y-m-d') }}', '{{ $event['start_at']->format('H:i') }}', '{{ $event['end_at']->format('H:i') }}')"
-                                                class="text-indigo-600 hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-300 transition-colors"
+                                                class="p-1.5 rounded-md text-indigo-600 hover:bg-indigo-100 hover:text-indigo-900 dark:text-indigo-400 dark:hover:bg-indigo-900/30 dark:hover:text-indigo-300 transition-colors"
                                             >
                                                 <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                                                 </svg>
                                             </button>
-                                            <span class="pointer-events-none absolute -top-2 left-1/2 -translate-x-1/2 -translate-y-full whitespace-nowrap rounded-md bg-gray-900 px-2 py-1 text-sm font-medium text-white opacity-0 transition group-hover/button:opacity-100 group-focus-within/button:opacity-100 dark:bg-gray-700">
+                                            <span class="pointer-events-none absolute -top-2 left-1/2 -translate-x-1/2 -translate-y-full whitespace-nowrap rounded-md bg-gray-900 px-2 py-1 text-sm font-medium text-white opacity-0 transition group-hover/button:opacity-100 group-focus-within/button:opacity-100 dark:bg-gray-700 z-20">
                                                 Reschedule
                                             </span>
                                         </div>
-                                        <form action="{{ route('today-lessons.cancel', $event['id']) }}" method="POST" class="inline" onsubmit="return confirm('Are you sure you want to cancel this lesson?')">
-                                            @csrf
-                                            @method('POST')
+                                        @if($event['status'] === 'cancelled' || $event['status'] === 'cancelled_student' || $event['status'] === 'cancelled_teacher')
+                                            <div class="text-sm font-medium text-red-700 dark:text-red-300">
+                                                @if($event['status'] === 'cancelled_student')
+                                                    Cancelled (Student)
+                                                @elseif($event['status'] === 'cancelled_teacher')
+                                                    Cancelled (Teacher)
+                                                @else
+                                                    Cancelled
+                                                @endif
+                                            </div>
+                                        @else
                                             <div class="relative group/button">
-                                                <button type="submit" aria-label="Cancel lesson" title="Cancel" class="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300 transition-colors">
+                                                <button
+                                                    type="button"
+                                                    aria-label="Cancel lesson"
+                                                    title="Cancel"
+                                                    onclick="openCancelModal({{ $event['id'] }})"
+                                                    class="p-1.5 rounded-md text-red-600 hover:bg-red-100 hover:text-red-900 dark:text-red-400 dark:hover:bg-red-900/30 dark:hover:text-red-300 transition-colors"
+                                                >
                                                     <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                                                     </svg>
                                                 </button>
-                                                <span class="pointer-events-none absolute -top-2 left-1/2 -translate-x-1/2 -translate-y-full whitespace-nowrap rounded-md bg-gray-900 px-2 py-1 text-sm font-medium text-white opacity-0 transition group-hover/button:opacity-100 group-focus-within/button:opacity-100 dark:bg-gray-700">
+                                                <span class="pointer-events-none absolute -top-2 left-1/2 -translate-x-1/2 -translate-y-full whitespace-nowrap rounded-md bg-gray-900 px-2 py-1 text-sm font-medium text-white opacity-0 transition group-hover/button:opacity-100 group-focus-within/button:opacity-100 dark:bg-gray-700 z-20">
                                                     Cancel
                                                 </span>
                                             </div>
-                                        </form>
+                                        @endif
                                         <form action="{{ route('today-lessons.absent', $event['id']) }}" method="POST" class="inline" onsubmit="return confirm('Mark this lesson as absent?')">
                                             @csrf
                                             @method('POST')
                                             <div class="relative group/button">
-                                                <button type="submit" aria-label="Mark lesson as absent" title="Mark as absent" class="text-orange-600 hover:text-orange-900 dark:text-orange-400 dark:hover:text-orange-300 transition-colors">
+                                                <button type="submit" aria-label="Mark lesson as absent" title="Mark as absent" class="p-1.5 rounded-md text-orange-600 hover:bg-orange-100 hover:text-orange-900 dark:text-orange-400 dark:hover:bg-orange-900/30 dark:hover:text-orange-300 transition-colors">
                                                     <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                                                     </svg>
                                                 </button>
-                                                <span class="pointer-events-none absolute -top-2 left-1/2 -translate-x-1/2 -translate-y-full whitespace-nowrap rounded-md bg-gray-900 px-2 py-1 text-sm font-medium text-white opacity-0 transition group-hover/button:opacity-100 group-focus-within/button:opacity-100 dark:bg-gray-700">
+                                                <span class="pointer-events-none absolute -top-2 left-1/2 -translate-x-1/2 -translate-y-full whitespace-nowrap rounded-md bg-gray-900 px-2 py-1 text-sm font-medium text-white opacity-0 transition group-hover/button:opacity-100 group-focus-within/button:opacity-100 dark:bg-gray-700 z-20">
                                                     Mark as absent
                                                 </span>
                                             </div>
@@ -197,12 +251,12 @@
                                             @csrf
                                             @method('POST')
                                             <div class="relative group/button">
-                                                <button type="submit" aria-label="Mark lesson as attended" title="Mark as attended" class="text-green-600 hover:text-green-900 dark:text-green-400 dark:hover:text-green-300 transition-colors">
+                                                <button type="submit" aria-label="Mark lesson as attended" title="Mark as attended" class="p-1.5 rounded-md text-green-600 hover:bg-green-100 hover:text-green-900 dark:text-green-400 dark:hover:bg-green-900/30 dark:hover:text-green-300 transition-colors">
                                                     <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                                                     </svg>
                                                 </button>
-                                                <span class="pointer-events-none absolute -top-2 left-1/2 -translate-x-1/2 -translate-y-full whitespace-nowrap rounded-md bg-gray-900 px-2 py-1 text-sm font-medium text-white opacity-0 transition group-hover/button:opacity-100 group-focus-within/button:opacity-100 dark:bg-gray-700">
+                                                <span class="pointer-events-none absolute -top-2 left-1/2 -translate-x-1/2 -translate-y-full whitespace-nowrap rounded-md bg-gray-900 px-2 py-1 text-sm font-medium text-white opacity-0 transition group-hover/button:opacity-100 group-focus-within/button:opacity-100 dark:bg-gray-700 z-20">
                                                     Mark as attended
                                                 </span>
                                             </div>
@@ -230,6 +284,70 @@
                     {{ $events->links() }}
                 </div>
             @endif
+        </div>
+
+        <!-- Cancel Modal -->
+        <div id="cancelModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-gray-900/40 px-4 py-6">
+            <div class="relative w-full max-w-md rounded-2xl border border-gray-200 bg-white shadow-2xl dark:border-gray-700 dark:bg-gray-900">
+                <div class="flex items-start justify-between border-b border-gray-200 px-6 py-4 dark:border-gray-700">
+                    <div>
+                        <h2 class="text-xl font-semibold text-gray-900 dark:text-white">Cancel Lesson</h2>
+                        <p class="text-sm text-gray-500 dark:text-gray-400">Who is cancelling this lesson?</p>
+                    </div>
+                    <button type="button" onclick="closeCancelModal()" class="text-gray-400 transition hover:text-gray-600 dark:hover:text-gray-200">
+                        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+
+                <form id="cancelForm" method="POST" class="space-y-6 px-6 py-6">
+                    @csrf
+                    @method('POST')
+                    <input type="hidden" name="event_id" id="cancel_event_id">
+                    <input type="hidden" name="cancel_type" id="cancel_type">
+
+                    <div class="space-y-3">
+                        <button
+                            type="button"
+                            onclick="submitCancel('student')"
+                            class="w-full rounded-xl border-2 border-red-200 bg-red-50 px-4 py-3 text-left text-sm font-semibold text-red-700 transition hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-red-500 dark:border-red-800 dark:bg-red-900/20 dark:text-red-300 dark:hover:bg-red-900/30"
+                        >
+                            <div class="flex items-center justify-between">
+                                <span>Cancel Student</span>
+                                <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                            </div>
+                            <p class="mt-1 text-xs text-red-600 dark:text-red-400">Student cancelled this lesson</p>
+                        </button>
+
+                        <button
+                            type="button"
+                            onclick="submitCancel('teacher')"
+                            class="w-full rounded-xl border-2 border-red-200 bg-red-50 px-4 py-3 text-left text-sm font-semibold text-red-700 transition hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-red-500 dark:border-red-800 dark:bg-red-900/20 dark:text-red-300 dark:hover:bg-red-900/30"
+                        >
+                            <div class="flex items-center justify-between">
+                                <span>Cancel Teacher</span>
+                                <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                            </div>
+                            <p class="mt-1 text-xs text-red-600 dark:text-red-400">Teacher cancelled this lesson</p>
+                        </button>
+                    </div>
+
+                    <div class="flex items-center justify-end gap-3 border-t border-gray-200 pt-4 dark:border-gray-700">
+                        <button
+                            type="button"
+                            onclick="closeCancelModal()"
+                            class="rounded-xl border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-600 transition hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-200 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-800"
+                        >
+                            Cancel
+                        </button>
+                    </div>
+                </form>
+            </div>
         </div>
 
         <!-- Reschedule Modal -->
@@ -321,6 +439,25 @@
         function closeRescheduleModal() {
             document.getElementById('rescheduleModal').classList.add('hidden');
             document.getElementById('rescheduleModal').classList.remove('flex');
+        }
+
+        function openCancelModal(eventId) {
+            document.getElementById('cancel_event_id').value = eventId;
+            document.getElementById('cancelForm').action = `/admin/today-lessons/${eventId}/cancel`;
+            document.getElementById('cancelModal').classList.remove('hidden');
+            document.getElementById('cancelModal').classList.add('flex');
+        }
+
+        function closeCancelModal() {
+            document.getElementById('cancelModal').classList.add('hidden');
+            document.getElementById('cancelModal').classList.remove('flex');
+        }
+
+        function submitCancel(cancelType) {
+            const eventId = document.getElementById('cancel_event_id').value;
+            document.getElementById('cancel_type').value = cancelType;
+            document.getElementById('cancelForm').action = `/admin/today-lessons/${eventId}/cancel`;
+            document.getElementById('cancelForm').submit();
         }
     </script>
 </x-app-layout>

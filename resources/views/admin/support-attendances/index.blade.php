@@ -287,10 +287,9 @@
                             type="time"
                             name="to_time"
                             required
-                            min="{{ $attendance->from_time }}"
                             class="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 shadow-sm transition focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-200"
                         />
-                        <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Start time: {{ \Carbon\Carbon::parse($attendance->from_time)->format('g:i A') }}</p>
+                        <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Start time: {{ \Carbon\Carbon::parse($attendance->from_time)->format('g:i A') }} (Note: If finish time is earlier than start time, it will be treated as next day)</p>
                     </div>
 
                     <div class="flex justify-end gap-3">

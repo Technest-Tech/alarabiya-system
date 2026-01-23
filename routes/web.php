@@ -98,8 +98,8 @@ Route::middleware(['auth','role:admin'])->prefix('admin')->group(function () {
     Route::post('package-notifications/{package}/mark-paid', [AdminPackageNotificationsController::class, 'markAsPaid'])->name('admin.package-notifications.mark-paid');
 });
 
-// Support-only routes (families, timetables, etc. - shared with admin but defined here to avoid conflicts)
-Route::middleware(['auth','role:admin|support'])->prefix('admin')->group(function () {
+// Support and Accountant routes (families, timetables, etc. - shared with admin but defined here to avoid conflicts)
+Route::middleware(['auth','role:admin|support|accountant'])->prefix('admin')->group(function () {
     Route::resource('families', AdminFamilyController::class)->names([
         'index' => 'admin.families.index',
         'create' => 'admin.families.create',

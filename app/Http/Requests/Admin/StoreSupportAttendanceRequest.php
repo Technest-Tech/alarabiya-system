@@ -25,7 +25,27 @@ class StoreSupportAttendanceRequest extends FormRequest
         return [
             'date' => ['required', 'date'],
             'from_time' => ['required', 'date_format:H:i'],
-            'to_time' => ['nullable', 'date_format:H:i', 'after:from_time'],
+            'to_time' => [
+                'nullable',
+                'date_format:H:i',
+                function ($attribute, $value, $fail) {
+                    if ($value === null) {
+                        return;
+                    }
+                    
+                    $fromTime = $this->input('from_time');
+                    if ($fromTime) {
+                        $fromTimeObj = \Carbon\Carbon::createFromFormat('H:i', $fromTime);
+                        $toTimeObj = \Carbon\Carbon::createFromFormat('H:i', $value);
+                        
+                        // If end time is less than start time, assume it's next day (crosses midnight)
+                        // Only reject if times are equal (same time)
+                        if ($toTimeObj->equalTo($fromTimeObj)) {
+                            $fail('The to time must be different from the from time.');
+                        }
+                    }
+                },
+            ],
             'status' => ['required', Rule::in(['present', 'absent', 'late', 'half_day'])],
             'notes' => ['nullable', 'string', 'max:1000'],
             'support_name_id' => ['nullable', 'exists:support_names,id'],

@@ -33,8 +33,10 @@ class UpdateFinishTimeRequest extends FormRequest
                     $toTime = \Carbon\Carbon::createFromFormat('H:i', $value);
                     $fromTimeObj = \Carbon\Carbon::createFromFormat('H:i:s', $fromTime);
                     
-                    if ($toTime->lte($fromTimeObj)) {
-                        $fail('The to time must be after ' . $fromTimeObj->format('H:i') . '.');
+                    // If end time is less than start time, assume it's next day (crosses midnight)
+                    // Only reject if times are equal (same time)
+                    if ($toTime->equalTo($fromTimeObj)) {
+                        $fail('The to time must be different from the from time.');
                     }
                 },
             ],

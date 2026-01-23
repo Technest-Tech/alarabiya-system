@@ -34,6 +34,16 @@ return [
 
     'lifetime' => (int) env('SESSION_LIFETIME', 120),
 
+    /*
+    |--------------------------------------------------------------------------
+    | Session Expire On Close
+    |--------------------------------------------------------------------------
+    |
+    | When set to true, sessions will expire immediately when the browser
+    | is closed. Set to false to keep sessions alive based on lifetime.
+    |
+    */
+
     'expire_on_close' => env('SESSION_EXPIRE_ON_CLOSE', false),
 
     /*
@@ -169,7 +179,7 @@ return [
     |
     */
 
-    'secure' => env('SESSION_SECURE_COOKIE'),
+    'secure' => env('SESSION_SECURE_COOKIE', null),
 
     /*
     |--------------------------------------------------------------------------
@@ -200,6 +210,17 @@ return [
     */
 
     'same_site' => env('SESSION_SAME_SITE', 'lax'),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Session Cookie Secure Auto-Detection
+    |--------------------------------------------------------------------------
+    |
+    | When null, Laravel will automatically detect if the request is over HTTPS
+    | and set the secure cookie flag accordingly. This is recommended for
+    | production environments.
+    |
+    */
 
     /*
     |--------------------------------------------------------------------------
