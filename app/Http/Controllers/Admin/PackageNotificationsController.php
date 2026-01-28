@@ -33,8 +33,7 @@ class PackageNotificationsController extends Controller
         }
         
         $completedPackages = $query->orderBy('completed_at', 'desc')
-            ->paginate(20)
-            ->appends($request->query());
+            ->get();
 
         return view('admin.package-notifications.index', [
             'completedPackages' => $completedPackages,

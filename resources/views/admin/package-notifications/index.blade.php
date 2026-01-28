@@ -133,13 +133,6 @@
                 </div>
             @endforelse
         </div>
-
-        <!-- Pagination -->
-        @if($completedPackages->hasPages())
-            <div class="mt-6">
-                {{ $completedPackages->links() }}
-            </div>
-        @endif
     </div>
 
 </x-app-layout>
