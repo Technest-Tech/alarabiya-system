@@ -33,7 +33,7 @@
         <!-- Notifications Grid -->
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             @forelse($completedPackages as $package)
-                <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 hover:shadow-md transition-all duration-200">
+                <div id="package-{{ $package->id }}" class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 hover:shadow-md transition-all duration-200">
                     <!-- Header -->
                     <div class="flex items-start justify-between mb-4">
                         <div class="flex items-center space-x-3">
@@ -110,15 +110,18 @@
 
                     <!-- Actions -->
                     <div class="pt-4 border-t border-gray-200 dark:border-gray-700">
-                        <form action="{{ route('admin.package-notifications.mark-paid', $package) }}" method="POST" onsubmit="return confirm('Mark this package as paid and create a new package? This will activate all pending lessons.')">
-                            @csrf
-                            <button type="submit" class="w-full inline-flex items-center justify-center px-4 py-2 text-white text-sm font-semibold rounded-lg shadow-sm hover:bg-green-700 dark:hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 dark:focus:ring-green-400 transition-colors" style="background-color: #16a34a;">
-                                <svg class="mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                </svg>
-                                Mark as Paid
-                            </button>
-                        </form>
+                        <button 
+                            type="button" 
+                            class="mark-paid-btn w-full inline-flex items-center justify-center px-4 py-2 text-white text-sm font-semibold rounded-lg shadow-sm hover:bg-green-700 dark:hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 dark:focus:ring-green-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed" 
+                            style="background-color: #16a34a;"
+                            data-package-id="{{ $package->id }}"
+                            data-student-name="{{ $package->student->name }}"
+                        >
+                            <svg class="mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            <span class="btn-text">Mark as Paid</span>
+                        </button>
                     </div>
                 </div>
             @empty
@@ -134,6 +137,333 @@
             @endforelse
         </div>
     </div>
+
+    <!-- Confirmation Modal -->
+    <div id="confirmModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-gray-900/40 px-4 py-6">
+        <div class="relative w-full max-w-md rounded-2xl border border-gray-200 bg-white shadow-2xl dark:border-gray-700 dark:bg-gray-900">
+            <div class="flex items-start justify-between border-b border-gray-200 px-6 py-4 dark:border-gray-700">
+                <div class="flex items-center space-x-3">
+                    <div class="flex h-10 w-10 items-center justify-center rounded-full bg-yellow-100 dark:bg-yellow-900/20">
+                        <svg class="h-6 w-6 text-yellow-600 dark:text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                        </svg>
+                    </div>
+                    <div>
+                        <h2 class="text-xl font-semibold text-gray-900 dark:text-white">Confirm Action</h2>
+                        <p class="text-sm text-gray-500 dark:text-gray-400 mt-1" id="confirmMessage">Mark this package as paid and create a new package? This will activate all pending lessons.</p>
+                    </div>
+                </div>
+                <button type="button" onclick="closeConfirmModal()" class="text-gray-400 transition hover:text-gray-600 dark:hover:text-gray-200">
+                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+            <div class="px-6 py-4 flex gap-3">
+                <button
+                    type="button"
+                    onclick="closeConfirmModal()"
+                    class="flex-1 inline-flex items-center justify-center rounded-xl border border-gray-300 px-4 py-2.5 text-sm font-semibold text-gray-700 shadow-sm transition hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-800"
+                >
+                    Cancel
+                </button>
+                <button
+                    type="button"
+                    id="confirmOkBtn"
+                    class="flex-1 inline-flex items-center justify-center rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                    <span id="confirmBtnText">Confirm</span>
+                    <svg id="confirmSpinner" class="hidden ml-2 h-4 w-4 animate-spin text-white" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Error Modal -->
+    <div id="errorModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-gray-900/40 px-4 py-6">
+        <div class="relative w-full max-w-md rounded-2xl border border-gray-200 bg-white shadow-2xl dark:border-gray-700 dark:bg-gray-900">
+            <div class="flex items-start justify-between border-b border-gray-200 px-6 py-4 dark:border-gray-700">
+                <div class="flex items-center space-x-3">
+                    <div class="flex h-10 w-10 items-center justify-center rounded-full bg-red-100 dark:bg-red-900/20">
+                        <svg class="h-6 w-6 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                    </div>
+                    <div>
+                        <h2 class="text-xl font-semibold text-gray-900 dark:text-white">Error</h2>
+                        <p class="text-sm text-gray-500 dark:text-gray-400" id="errorMessage">An error occurred. Please try again.</p>
+                    </div>
+                </div>
+                <button type="button" onclick="closeErrorModal()" class="text-gray-400 transition hover:text-gray-600 dark:hover:text-gray-200">
+                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+            <div class="px-6 py-4">
+                <button
+                    type="button"
+                    onclick="closeErrorModal()"
+                    class="w-full inline-flex items-center justify-center rounded-xl bg-red-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
+                >
+                    OK
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Success Modal -->
+    <div id="successModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-gray-900/40 px-4 py-6">
+        <div class="relative w-full max-w-md rounded-2xl border border-gray-200 bg-white shadow-2xl dark:border-gray-700 dark:bg-gray-900">
+            <div class="flex items-start justify-between border-b border-gray-200 px-6 py-4 dark:border-gray-700">
+                <div class="flex items-center space-x-3">
+                    <div class="flex h-10 w-10 items-center justify-center rounded-full bg-green-100 dark:bg-green-900/20">
+                        <svg class="h-6 w-6 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                    </div>
+                    <div>
+                        <h2 class="text-xl font-semibold text-gray-900 dark:text-white">Success</h2>
+                        <p class="text-sm text-gray-500 dark:text-gray-400" id="successMessage">Package marked as paid and renewed successfully.</p>
+                    </div>
+                </div>
+                <button type="button" onclick="closeSuccessModal()" class="text-gray-400 transition hover:text-gray-600 dark:hover:text-gray-200">
+                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+            <div class="px-6 py-4">
+                <button
+                    type="button"
+                    onclick="closeSuccessModal()"
+                    class="w-full inline-flex items-center justify-center rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+                >
+                    OK
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentPackageId = null;
+        let currentButton = null;
+        let currentBtnText = null;
+        let originalBtnText = null;
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const buttons = document.querySelectorAll('.mark-paid-btn');
+            
+            buttons.forEach(button => {
+                button.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    
+                    // Prevent multiple clicks
+                    if (this.disabled) {
+                        return;
+                    }
+                    
+                    currentPackageId = this.dataset.packageId;
+                    currentButton = this;
+                    currentBtnText = this.querySelector('.btn-text');
+                    originalBtnText = currentBtnText.textContent;
+                    
+                    // Show confirmation modal
+                    showConfirmModal();
+                });
+            });
+
+            // Handle confirm button click
+            const confirmOkBtn = document.getElementById('confirmOkBtn');
+            if (confirmOkBtn) {
+                confirmOkBtn.addEventListener('click', function() {
+                    if (!currentPackageId || this.disabled) {
+                        return;
+                    }
+                    
+                    // Disable confirm button and show spinner
+                    this.disabled = true;
+                    const btnText = document.getElementById('confirmBtnText');
+                    const spinner = document.getElementById('confirmSpinner');
+                    if (btnText) btnText.textContent = 'Processing...';
+                    if (spinner) spinner.classList.remove('hidden');
+                    
+                    // Close confirmation modal
+                    closeConfirmModal();
+                    
+                    // Disable original button
+                    if (currentButton) {
+                        currentButton.disabled = true;
+                        if (currentBtnText) {
+                            currentBtnText.textContent = 'Processing...';
+                        }
+                    }
+                    
+                    // Process the request
+                    processMarkAsPaid();
+                });
+            }
+        });
+        
+        function showConfirmModal() {
+            const modal = document.getElementById('confirmModal');
+            const messageEl = document.getElementById('confirmMessage');
+            if (messageEl && currentButton) {
+                const studentName = currentButton.dataset.studentName;
+                messageEl.textContent = `Mark ${studentName}'s package as paid and create a new package? This will activate all pending lessons.`;
+            }
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+        
+        function closeConfirmModal() {
+            const modal = document.getElementById('confirmModal');
+            const confirmOkBtn = document.getElementById('confirmOkBtn');
+            const btnText = document.getElementById('confirmBtnText');
+            const spinner = document.getElementById('confirmSpinner');
+            
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+            
+            // Reset confirm button state
+            if (confirmOkBtn) confirmOkBtn.disabled = false;
+            if (btnText) btnText.textContent = 'Confirm';
+            if (spinner) spinner.classList.add('hidden');
+        }
+        
+        function processMarkAsPaid() {
+            if (!currentPackageId) {
+                return;
+            }
+            
+            // Get CSRF token
+            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+            
+            if (!csrfToken) {
+                console.error('CSRF token not found');
+                showErrorModal('CSRF token not found. Please refresh the page and try again.');
+                resetButtonState();
+                return;
+            }
+            
+            // Make AJAX request
+            const markPaidUrl = `{{ route('admin.package-notifications.mark-paid', ':id') }}`.replace(':id', currentPackageId);
+            
+            fetch(markPaidUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': csrfToken,
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify({})
+            })
+            .then(response => {
+                if (!response.ok) {
+                    return response.text().then(text => {
+                        try {
+                            return JSON.parse(text);
+                        } catch {
+                            throw new Error(text || 'Server error');
+                        }
+                    });
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    // Remove the package card with animation
+                    const packageCard = document.getElementById('package-' + currentPackageId);
+                    if (packageCard) {
+                        packageCard.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+                        packageCard.style.opacity = '0';
+                        packageCard.style.transform = 'scale(0.95)';
+                        
+                        setTimeout(() => {
+                            packageCard.remove();
+                            
+                            // Check if no packages left
+                            const remainingPackages = document.querySelectorAll('[id^="package-"]');
+                            if (remainingPackages.length === 0) {
+                                // Reload page to show empty state
+                                window.location.reload();
+                            }
+                        }, 300);
+                    }
+                    
+                    // Show success modal
+                    showSuccessModal(data.message || 'Package marked as paid and renewed successfully.');
+                    
+                    // Reset state
+                    currentPackageId = null;
+                    currentButton = null;
+                    currentBtnText = null;
+                    originalBtnText = null;
+                } else {
+                    throw new Error(data.message || 'An error occurred');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showErrorModal('An error occurred: ' + (error.message || 'Please try again'));
+                resetButtonState();
+            });
+        }
+        
+        function resetButtonState() {
+            if (currentButton) {
+                currentButton.disabled = false;
+            }
+            if (currentBtnText && originalBtnText) {
+                currentBtnText.textContent = originalBtnText;
+            }
+            
+            const confirmOkBtn = document.getElementById('confirmOkBtn');
+            const btnText = document.getElementById('confirmBtnText');
+            const spinner = document.getElementById('confirmSpinner');
+            
+            if (confirmOkBtn) confirmOkBtn.disabled = false;
+            if (btnText) btnText.textContent = 'Confirm';
+            if (spinner) spinner.classList.add('hidden');
+        }
+        
+        function showSuccessModal(message) {
+            const modal = document.getElementById('successModal');
+            const messageEl = document.getElementById('successMessage');
+            if (messageEl) {
+                messageEl.textContent = message;
+            }
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+        
+        function showErrorModal(message) {
+            const modal = document.getElementById('errorModal');
+            const messageEl = document.getElementById('errorMessage');
+            if (messageEl) {
+                messageEl.textContent = message;
+            }
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+        
+        function closeErrorModal() {
+            const modal = document.getElementById('errorModal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+        
+        function closeSuccessModal() {
+            const modal = document.getElementById('successModal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+    </script>
 
 </x-app-layout>
 

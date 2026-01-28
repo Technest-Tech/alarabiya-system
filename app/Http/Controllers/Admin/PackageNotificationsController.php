@@ -44,9 +44,17 @@ class PackageNotificationsController extends Controller
     /**
      * Mark package as paid and renew
      */
-    public function markAsPaid(StudentPackage $package): RedirectResponse
+    public function markAsPaid(Request $request, StudentPackage $package)
     {
         $this->packageService->renewPackage($package);
+
+        if ($request->expectsJson() || $request->ajax()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Package marked as paid and renewed successfully.',
+                'package_id' => $package->id,
+            ]);
+        }
 
         return redirect()->route('admin.package-notifications.index')
             ->with('status', 'Package marked as paid and renewed successfully.');
