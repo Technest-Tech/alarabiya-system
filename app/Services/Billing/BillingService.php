@@ -143,7 +143,7 @@ class BillingService
 
     protected function resolveCurrency(Student $student): string
     {
-        return config('app.currency', 'USD');
+        return $student->currency ?? config('app.currency', 'USD');
     }
 }
 

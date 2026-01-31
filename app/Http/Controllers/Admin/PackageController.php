@@ -105,7 +105,9 @@ class PackageController extends Controller
 
         $manualTotal = $manualBilling?->total_amount ?? 0;
 
-        $currency = $automaticBilling?->currency
+        // Use student's currency as primary source, fallback to billing currency, then config default
+        $currency = $student->currency
+            ?? $automaticBilling?->currency
             ?? $manualBilling?->currency
             ?? config('app.currency', 'USD');
 
