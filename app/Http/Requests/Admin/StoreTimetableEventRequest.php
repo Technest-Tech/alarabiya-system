@@ -47,7 +47,20 @@ class StoreTimetableEventRequest extends FormRequest
                 try {
                     $startTime = Carbon::createFromFormat('H:i', $teacherStart);
                     $endTime = Carbon::createFromFormat('H:i', $teacherEnd);
-                    if ($endTime->lessThanOrEqualTo($startTime)) {
+                    
+                    // Handle times that span midnight (e.g., 23:30 to 00:30)
+                    // If end time is less than start time, assume it's the next day
+                    $endTimeForComparison = $endTime->copy();
+                    if ($endTimeForComparison->lessThanOrEqualTo($startTime)) {
+                        $endTimeForComparison->addDay();
+                    }
+                    
+                    // Check if end time equals start time (same time, not spanning midnight)
+                    if ($endTime->equalTo($startTime)) {
+                        $validator->errors()->add('teacher_end_time', 'Teacher end time must be after the start time.');
+                    }
+                    // If the duration is more than 24 hours, it's likely an error
+                    elseif ($endTimeForComparison->diffInHours($startTime) > 24) {
                         $validator->errors()->add('teacher_end_time', 'Teacher end time must be after the start time.');
                     }
                 } catch (\InvalidArgumentException) {
@@ -60,7 +73,20 @@ class StoreTimetableEventRequest extends FormRequest
                 try {
                     $startTime = Carbon::createFromFormat('H:i', $studentStart);
                     $endTime = Carbon::createFromFormat('H:i', $studentEnd);
-                    if ($endTime->lessThanOrEqualTo($startTime)) {
+                    
+                    // Handle times that span midnight (e.g., 23:30 to 00:30)
+                    // If end time is less than start time, assume it's the next day
+                    $endTimeForComparison = $endTime->copy();
+                    if ($endTimeForComparison->lessThanOrEqualTo($startTime)) {
+                        $endTimeForComparison->addDay();
+                    }
+                    
+                    // Check if end time equals start time (same time, not spanning midnight)
+                    if ($endTime->equalTo($startTime)) {
+                        $validator->errors()->add('student_end_time', 'Student end time must be after the start time.');
+                    }
+                    // If the duration is more than 24 hours, it's likely an error
+                    elseif ($endTimeForComparison->diffInHours($startTime) > 24) {
                         $validator->errors()->add('student_end_time', 'Student end time must be after the start time.');
                     }
                 } catch (\InvalidArgumentException) {

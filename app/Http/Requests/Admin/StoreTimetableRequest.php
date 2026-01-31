@@ -106,7 +106,19 @@ class StoreTimetableRequest extends FormRequest
                                 $startTime = Carbon::createFromFormat('H:i', $dayStart);
                                 $endTime = Carbon::createFromFormat('H:i', $dayEnd);
                                 
-                                if ($endTime->equalTo($startTime) || $endTime->lessThan($startTime)) {
+                                // Handle times that span midnight (e.g., 23:30 to 00:30)
+                                // If end time is less than start time, assume it's the next day
+                                $endTimeForComparison = $endTime->copy();
+                                if ($endTimeForComparison->lessThanOrEqualTo($startTime)) {
+                                    $endTimeForComparison->addDay();
+                                }
+                                
+                                // Check if end time equals start time (same time, not spanning midnight)
+                                if ($endTime->equalTo($startTime)) {
+                                    $validator->errors()->add("{$slotPrefix}.end_time", "End time must be after the start time for {$day} slot " . ($slotIndex + 1) . ".");
+                                }
+                                // If the duration is more than 24 hours, it's likely an error
+                                elseif ($endTimeForComparison->diffInHours($startTime) > 24) {
                                     $validator->errors()->add("{$slotPrefix}.end_time", "End time must be after the start time for {$day} slot " . ($slotIndex + 1) . ".");
                                 }
                             } catch (\InvalidArgumentException) {
@@ -131,7 +143,19 @@ class StoreTimetableRequest extends FormRequest
                     return;
                 }
 
-                if ($endTime->equalTo($startTime) || $endTime->lessThan($startTime)) {
+                // Handle times that span midnight (e.g., 23:30 to 00:30)
+                // If end time is less than start time, assume it's the next day
+                $endTimeForComparison = $endTime->copy();
+                if ($endTimeForComparison->lessThanOrEqualTo($startTime)) {
+                    $endTimeForComparison->addDay();
+                }
+
+                // Check if end time equals start time (same time, not spanning midnight)
+                if ($endTime->equalTo($startTime)) {
+                    $validator->errors()->add('end_time', 'End time must be after the start time.');
+                }
+                // If the duration is more than 24 hours, it's likely an error
+                elseif ($endTimeForComparison->diffInHours($startTime) > 24) {
                     $validator->errors()->add('end_time', 'End time must be after the start time.');
                 }
             }
