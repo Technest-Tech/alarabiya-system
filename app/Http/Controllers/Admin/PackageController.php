@@ -68,13 +68,11 @@ class PackageController extends Controller
             ->with('items')
             ->get();
 
-        $lessonRows = $lessons->map(function (Lesson $lesson) use ($student, $start, $end) {
+        $lessonRows = $lessons->map(function (Lesson $lesson) use ($student) {
             $billingItem = $lesson->billingItems
-                ->first(function ($item) use ($start, $end) {
-                    $lessonDate = Carbon::parse($lesson->date);
+                ->first(function ($item) {
                     return $item->billing 
-                        && $item->billing->type === 'automatic'
-                        && $lessonDate->between($start, $end);
+                        && $item->billing->type === 'automatic';
                 });
 
             $hourlyRate = $billingItem?->hourly_rate ?? $student->hourly_rate;
