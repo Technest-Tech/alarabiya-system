@@ -46,11 +46,14 @@ class PackageController extends Controller
 
     public function studentReport(Request $request, Student $student)
     {
-        $month = (int) $request->get('month', now()->month);
-        $year = (int) $request->get('year', now()->year);
+        // Validate date inputs
+        $request->validate([
+            'from_date' => 'required|date',
+            'to_date' => 'required|date|after_or_equal:from_date',
+        ]);
 
-        $start = Carbon::createFromDate($year, $month, 1)->startOfMonth();
-        $end = $start->clone()->endOfMonth();
+        $start = Carbon::parse($request->get('from_date'))->startOfDay();
+        $end = Carbon::parse($request->get('to_date'))->endOfDay();
 
         $lessons = Lesson::with(['teacher.user', 'billingItems.billing'])
             ->where('student_id', $student->id)
@@ -58,16 +61,20 @@ class PackageController extends Controller
             ->orderBy('date')
             ->get();
 
-        $automaticBilling = Billing::where('student_id', $student->id)
-            ->where('month', $start->toDateString())
+        // Get automatic billings within the date range
+        $automaticBillings = Billing::where('student_id', $student->id)
             ->where('type', 'automatic')
+            ->whereBetween('month', [$start->startOfMonth()->toDateString(), $end->endOfMonth()->toDateString()])
             ->with('items')
-            ->first();
+            ->get();
 
-        $lessonRows = $lessons->map(function (Lesson $lesson) use ($student, $start) {
+        $lessonRows = $lessons->map(function (Lesson $lesson) use ($student, $start, $end) {
             $billingItem = $lesson->billingItems
-                ->first(function ($item) use ($start) {
-                    return $item->billing && $item->billing->month->equalTo($start) && $item->billing->type === 'automatic';
+                ->first(function ($item) use ($start, $end) {
+                    $lessonDate = Carbon::parse($lesson->date);
+                    return $item->billing 
+                        && $item->billing->type === 'automatic'
+                        && $lessonDate->between($start, $end);
                 });
 
             $hourlyRate = $billingItem?->hourly_rate ?? $student->hourly_rate;
@@ -90,30 +97,39 @@ class PackageController extends Controller
 
         $lessonTotal = $lessonRows->sum('amount');
 
-        $manualBilling = Billing::with('items')
+        // Get manual billings within the date range
+        $manualBillings = Billing::with('items')
             ->where('student_id', $student->id)
-            ->where('month', $start->toDateString())
             ->where('type', 'manual')
-            ->first();
+            ->whereBetween('month', [$start->startOfMonth()->toDateString(), $end->endOfMonth()->toDateString()])
+            ->get();
 
-        $manualEntries = $manualBilling?->items->map(function ($item) {
-            return [
-                'description' => $item->description,
-                'amount' => $item->amount,
-            ];
-        }) ?? collect();
+        // Collect manual entries from all manual billings in the range
+        $manualEntries = collect();
+        foreach ($manualBillings as $manualBilling) {
+            foreach ($manualBilling->items as $item) {
+                $manualEntries->push([
+                    'description' => $item->description,
+                    'amount' => $item->amount,
+                ]);
+            }
+        }
 
-        $manualTotal = $manualBilling?->total_amount ?? 0;
+        $manualTotal = $manualBillings->sum('total_amount');
 
         // Use student's currency as primary source, fallback to billing currency, then config default
+        $firstAutomaticBilling = $automaticBillings->first();
+        $firstManualBilling = $manualBillings->first();
         $currency = $student->currency
-            ?? $automaticBilling?->currency
-            ?? $manualBilling?->currency
+            ?? $firstAutomaticBilling?->currency
+            ?? $firstManualBilling?->currency
             ?? config('app.currency', 'USD');
+
+        $dateRangeLabel = $start->format('M d, Y') . ' - ' . $end->format('M d, Y');
 
         $pdf = Pdf::loadView('admin.packages.report', [
             'student' => $student,
-            'monthLabel' => $start->isoFormat('MMMM YYYY'),
+            'monthLabel' => $dateRangeLabel,
             'lessonRows' => $lessonRows,
             'lessonTotal' => $lessonTotal,
             'manualEntries' => $manualEntries,
@@ -123,9 +139,10 @@ class PackageController extends Controller
         ])->setPaper('a4', 'portrait');
 
         $fileName = sprintf(
-            'student-report-%s-%s.pdf',
+            'student-report-%s-%s-to-%s.pdf',
             Str::slug($student->name),
-            $start->format('Y-m')
+            $start->format('Y-m-d'),
+            $end->format('Y-m-d')
         );
 
         return $pdf->download($fileName);
