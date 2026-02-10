@@ -9,6 +9,7 @@ use App\Models\Teacher;
 use App\Models\TimetableEvent;
 use Carbon\Carbon;
 use Illuminate\Contracts\View\View;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 
@@ -54,10 +55,9 @@ class TodayLessonsController extends Controller
         $events = $query
             ->whereBetween('start_at', [$startOfPeriod->copy()->utc(), $endOfPeriod->copy()->utc()])
             ->orderBy('start_at')
-            ->paginate(15)
-            ->withQueryString();
+            ->get();
 
-        $events->getCollection()->transform(function (TimetableEvent $event) use ($timezone) {
+        $events->transform(function (TimetableEvent $event) use ($timezone) {
                 $teacherTimezone = $event->timezone ?? $timezone;
                 $timetable = $event->timetable;
                 $studentTimezone = $timetable?->timezone;
@@ -118,7 +118,7 @@ class TodayLessonsController extends Controller
         ]);
     }
 
-    public function reschedule(RescheduleEventRequest $request, TimetableEvent $event): RedirectResponse
+    public function reschedule(RescheduleEventRequest $request, TimetableEvent $event): RedirectResponse|JsonResponse
     {
         $payload = $request->validated();
         $timezone = $event->timezone ?? config('app.timezone');
@@ -188,11 +188,23 @@ class TodayLessonsController extends Controller
             ]);
         }
 
+        $event->refresh();
+        $event->load(['student', 'teacher.user', 'timetable']);
+        $formattedEvent = $this->formatEvent($event);
+
+        if ($request->expectsJson() || $request->ajax()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Lesson rescheduled successfully.',
+                'event' => $formattedEvent,
+            ]);
+        }
+
         return redirect()->route('today-lessons.index')
             ->with('status', 'Lesson rescheduled successfully.');
     }
 
-    public function cancel(Request $request, TimetableEvent $event): RedirectResponse
+    public function cancel(Request $request, TimetableEvent $event): RedirectResponse|JsonResponse
     {
         $cancelType = $request->input('cancel_type', 'cancelled');
         
@@ -212,27 +224,110 @@ class TodayLessonsController extends Controller
             default => 'Lesson cancelled successfully.',
         };
 
+        $event->refresh();
+        $event->load(['student', 'teacher.user', 'timetable']);
+        $formattedEvent = $this->formatEvent($event);
+
+        if ($request->expectsJson() || $request->ajax()) {
+            return response()->json([
+                'success' => true,
+                'message' => $message,
+                'event' => $formattedEvent,
+            ]);
+        }
+
         return redirect()->route('today-lessons.index')
             ->with('status', $message);
     }
 
-    public function absent(TimetableEvent $event): RedirectResponse
+    public function absent(Request $request, TimetableEvent $event): RedirectResponse|JsonResponse
     {
         $event->update([
             'status' => 'absent',
         ]);
 
+        $event->refresh();
+        $event->load(['student', 'teacher.user', 'timetable']);
+        $formattedEvent = $this->formatEvent($event);
+
+        if ($request->expectsJson() || $request->ajax()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Lesson marked as absent.',
+                'event' => $formattedEvent,
+            ]);
+        }
+
         return redirect()->route('today-lessons.index')
             ->with('status', 'Lesson marked as absent.');
     }
 
-    public function attended(TimetableEvent $event): RedirectResponse
+    public function attended(Request $request, TimetableEvent $event): RedirectResponse|JsonResponse
     {
         $event->update([
             'status' => 'attended',
         ]);
 
+        $event->refresh();
+        $event->load(['student', 'teacher.user', 'timetable']);
+        $formattedEvent = $this->formatEvent($event);
+
+        if ($request->expectsJson() || $request->ajax()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Lesson marked as attended.',
+                'event' => $formattedEvent,
+            ]);
+        }
+
         return redirect()->route('today-lessons.index')
             ->with('status', 'Lesson marked as attended.');
+    }
+
+    private function formatEvent(TimetableEvent $event): array
+    {
+        $timezone = config('app.timezone');
+        $teacherTimezone = $event->timezone ?? $timezone;
+        $timetable = $event->timetable;
+        $studentTimezone = $timetable?->timezone;
+
+        $teacherStart = $event->start_at->clone()->setTimezone($teacherTimezone);
+        $teacherEnd = $event->end_at->clone()->setTimezone($teacherTimezone);
+        
+        // If using manual time difference and no student timezone, use stored student times
+        if ($timetable && $timetable->use_manual_time_diff && !$studentTimezone && $timetable->student_time_from && $timetable->student_time_to) {
+            $studentStart = Carbon::today()->setTimeFromTimeString($timetable->student_time_from);
+            $studentEnd = Carbon::today()->setTimeFromTimeString($timetable->student_time_to);
+            $studentTimezone = 'undefined';
+        } elseif ($studentTimezone) {
+            $studentStart = $event->start_at->clone()->setTimezone($studentTimezone);
+            $studentEnd = $event->end_at->clone()->setTimezone($studentTimezone);
+        } else {
+            // Fallback to teacher timezone
+            $studentStart = $teacherStart;
+            $studentEnd = $teacherEnd;
+            $studentTimezone = $teacherTimezone;
+        }
+
+        $displayStart = $event->start_at->clone()->setTimezone($timezone);
+        $displayEnd = $event->end_at->clone()->setTimezone($timezone);
+
+        return [
+            'id' => $event->id,
+            'student' => $event->student?->name,
+            'teacher' => optional($event->teacher?->user)->name,
+            'course_name' => $event->course_name,
+            'start_at' => $displayStart->format('M d, Y'),
+            'start_at_day' => $displayStart->format('l'),
+            'start_at_date' => $displayStart->format('Y-m-d'),
+            'start_at_time' => $displayStart->format('H:i'),
+            'end_at_time' => $displayEnd->format('H:i'),
+            'time' => sprintf('%s – %s', $teacherStart->format('g:i A'), $teacherEnd->format('g:i A')),
+            'teacher_time' => sprintf('%s – %s', $teacherStart->format('g:i A'), $teacherEnd->format('g:i A')),
+            'student_time' => sprintf('%s – %s', $studentStart->format('g:i A'), $studentEnd->format('g:i A')),
+            'teacher_timezone' => $teacherTimezone,
+            'student_timezone' => $studentTimezone,
+            'status' => $event->status ?? 'scheduled',
+        ];
     }
 }

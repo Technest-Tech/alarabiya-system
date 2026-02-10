@@ -140,7 +140,7 @@
                     </thead>
                     <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                         @forelse($events as $event)
-                            <tr class="transition-colors group @if($event['status'] === 'cancelled' || $event['status'] === 'cancelled_student' || $event['status'] === 'cancelled_teacher') bg-red-200 dark:bg-red-900/60 hover:bg-red-300 dark:hover:bg-red-900/80 @elseif($event['status'] === 'absent') bg-orange-200 dark:bg-orange-900/60 hover:bg-orange-300 dark:hover:bg-orange-900/80 @elseif($event['status'] === 'rescheduled') bg-yellow-200 dark:bg-yellow-900/60 hover:bg-yellow-300 dark:hover:bg-yellow-900/80 @elseif($event['status'] === 'attended') bg-green-200 dark:bg-green-900/60 hover:bg-green-300 dark:hover:bg-green-900/80 @else hover:bg-gray-50 dark:hover:bg-gray-700/50 @endif">
+                            <tr data-event-id="{{ $event['id'] }}" class="transition-colors group @if($event['status'] === 'cancelled' || $event['status'] === 'cancelled_student' || $event['status'] === 'cancelled_teacher') bg-red-200 dark:bg-red-900/60 hover:bg-red-300 dark:hover:bg-red-900/80 @elseif($event['status'] === 'absent') bg-orange-200 dark:bg-orange-900/60 hover:bg-orange-300 dark:hover:bg-orange-900/80 @elseif($event['status'] === 'rescheduled') bg-yellow-200 dark:bg-yellow-900/60 hover:bg-yellow-300 dark:hover:bg-yellow-900/80 @elseif($event['status'] === 'attended') bg-green-200 dark:bg-green-900/60 hover:bg-green-300 dark:hover:bg-green-900/80 @else hover:bg-gray-50 dark:hover:bg-gray-700/50 @endif">
                                 <td class="px-6 py-4 whitespace-nowrap">
                                     <div class="text-base font-medium text-gray-900 dark:text-white">
                                         {{ $event['start_at']->format('M d, Y') }}
@@ -233,34 +233,38 @@
                                                 </span>
                                             </div>
                                         @endif
-                                        <form action="{{ route('today-lessons.absent', $event['id']) }}" method="POST" class="inline" onsubmit="return confirm('Mark this lesson as absent?')">
-                                            @csrf
-                                            @method('POST')
-                                            <div class="relative group/button">
-                                                <button type="submit" aria-label="Mark lesson as absent" title="Mark as absent" class="p-1.5 rounded-md text-orange-600 hover:bg-orange-100 hover:text-orange-900 dark:text-orange-400 dark:hover:bg-orange-900/30 dark:hover:text-orange-300 transition-colors">
-                                                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                                    </svg>
-                                                </button>
-                                                <span class="pointer-events-none absolute -top-2 left-1/2 -translate-x-1/2 -translate-y-full whitespace-nowrap rounded-md bg-gray-900 px-2 py-1 text-sm font-medium text-white opacity-0 transition group-hover/button:opacity-100 group-focus-within/button:opacity-100 dark:bg-gray-700 z-20">
-                                                    Mark as absent
-                                                </span>
-                                            </div>
-                                        </form>
-                                        <form action="{{ route('today-lessons.attended', $event['id']) }}" method="POST" class="inline" onsubmit="return confirm('Mark this lesson as attended?')">
-                                            @csrf
-                                            @method('POST')
-                                            <div class="relative group/button">
-                                                <button type="submit" aria-label="Mark lesson as attended" title="Mark as attended" class="p-1.5 rounded-md text-green-600 hover:bg-green-100 hover:text-green-900 dark:text-green-400 dark:hover:bg-green-900/30 dark:hover:text-green-300 transition-colors">
-                                                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                                    </svg>
-                                                </button>
-                                                <span class="pointer-events-none absolute -top-2 left-1/2 -translate-x-1/2 -translate-y-full whitespace-nowrap rounded-md bg-gray-900 px-2 py-1 text-sm font-medium text-white opacity-0 transition group-hover/button:opacity-100 group-focus-within/button:opacity-100 dark:bg-gray-700 z-20">
-                                                    Mark as attended
-                                                </span>
-                                            </div>
-                                        </form>
+                                        <div class="relative group/button">
+                                            <button
+                                                type="button"
+                                                aria-label="Mark lesson as absent"
+                                                title="Mark as absent"
+                                                onclick="markAsAbsent({{ $event['id'] }})"
+                                                class="p-1.5 rounded-md text-orange-600 hover:bg-orange-100 hover:text-orange-900 dark:text-orange-400 dark:hover:bg-orange-900/30 dark:hover:text-orange-300 transition-colors"
+                                            >
+                                                <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                                </svg>
+                                            </button>
+                                            <span class="pointer-events-none absolute -top-2 left-1/2 -translate-x-1/2 -translate-y-full whitespace-nowrap rounded-md bg-gray-900 px-2 py-1 text-sm font-medium text-white opacity-0 transition group-hover/button:opacity-100 group-focus-within/button:opacity-100 dark:bg-gray-700 z-20">
+                                                Mark as absent
+                                            </span>
+                                        </div>
+                                        <div class="relative group/button">
+                                            <button
+                                                type="button"
+                                                aria-label="Mark lesson as attended"
+                                                title="Mark as attended"
+                                                onclick="markAsAttended({{ $event['id'] }})"
+                                                class="p-1.5 rounded-md text-green-600 hover:bg-green-100 hover:text-green-900 dark:text-green-400 dark:hover:bg-green-900/30 dark:hover:text-green-300 transition-colors"
+                                            >
+                                                <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                                </svg>
+                                            </button>
+                                            <span class="pointer-events-none absolute -top-2 left-1/2 -translate-x-1/2 -translate-y-full whitespace-nowrap rounded-md bg-gray-900 px-2 py-1 text-sm font-medium text-white opacity-0 transition group-hover/button:opacity-100 group-focus-within/button:opacity-100 dark:bg-gray-700 z-20">
+                                                Mark as attended
+                                            </span>
+                                        </div>
                                     </div>
                                 </td>
                             </tr>
@@ -279,15 +283,116 @@
                 </table>
             </div>
 
-            @if($events->hasPages())
-                <div class="px-6 py-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/40">
-                    {{ $events->links() }}
+        </div>
+
+        <!-- Confirmation Modal -->
+        <div id="confirmModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-gray-900/40 backdrop-blur-sm px-4 py-6 transition-opacity" onclick="if(event.target === this) closeConfirmModal()">
+            <div class="relative w-full max-w-md rounded-2xl border border-gray-200 bg-white shadow-2xl dark:border-gray-700 dark:bg-gray-900 transform transition-all">
+                <div class="flex items-start justify-between border-b border-gray-200 px-6 py-4 dark:border-gray-700">
+                    <div class="flex items-center space-x-3">
+                        <div class="flex h-10 w-10 items-center justify-center rounded-full bg-yellow-100 dark:bg-yellow-900/20">
+                            <svg class="h-6 w-6 text-yellow-600 dark:text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                            </svg>
+                        </div>
+                        <div>
+                            <h2 class="text-xl font-semibold text-gray-900 dark:text-white">Confirm Action</h2>
+                            <p class="text-sm text-gray-500 dark:text-gray-400 mt-1" id="confirmMessage">Are you sure you want to proceed?</p>
+                        </div>
+                    </div>
+                    <button type="button" onclick="closeConfirmModal()" class="text-gray-400 transition hover:text-gray-600 dark:hover:text-gray-200">
+                        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
                 </div>
-            @endif
+                <div class="px-6 py-4 flex gap-3">
+                    <button
+                        type="button"
+                        onclick="closeConfirmModal()"
+                        class="flex-1 inline-flex items-center justify-center rounded-xl border border-gray-300 px-4 py-2.5 text-sm font-semibold text-gray-700 shadow-sm transition hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-800"
+                    >
+                        Cancel
+                    </button>
+                    <button
+                        type="button"
+                        id="confirmOkBtn"
+                        class="flex-1 inline-flex items-center justify-center rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+                    >
+                        <span id="confirmBtnText">Confirm</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Success Modal -->
+        <div id="successModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-gray-900/40 backdrop-blur-sm px-4 py-6 transition-opacity" onclick="if(event.target === this) closeSuccessModal()">
+            <div class="relative w-full max-w-md rounded-2xl border border-gray-200 bg-white shadow-2xl dark:border-gray-700 dark:bg-gray-900 transform transition-all">
+                <div class="flex items-start justify-between border-b border-gray-200 px-6 py-4 dark:border-gray-700">
+                    <div class="flex items-center space-x-3">
+                        <div class="flex h-10 w-10 items-center justify-center rounded-full bg-green-100 dark:bg-green-900/20">
+                            <svg class="h-6 w-6 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                            </svg>
+                        </div>
+                        <div>
+                            <h2 class="text-xl font-semibold text-gray-900 dark:text-white">Success</h2>
+                            <p class="text-sm text-gray-500 dark:text-gray-400 mt-1" id="successMessage">Operation completed successfully.</p>
+                        </div>
+                    </div>
+                    <button type="button" onclick="closeSuccessModal()" class="text-gray-400 transition hover:text-gray-600 dark:hover:text-gray-200">
+                        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+                <div class="px-6 py-4 flex justify-end">
+                    <button
+                        type="button"
+                        onclick="closeSuccessModal()"
+                        class="inline-flex items-center justify-center rounded-xl bg-green-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
+                    >
+                        OK
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Error Modal -->
+        <div id="errorModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-gray-900/40 backdrop-blur-sm px-4 py-6 transition-opacity" onclick="if(event.target === this) closeErrorModal()">
+            <div class="relative w-full max-w-md rounded-2xl border border-gray-200 bg-white shadow-2xl dark:border-gray-700 dark:bg-gray-900 transform transition-all">
+                <div class="flex items-start justify-between border-b border-gray-200 px-6 py-4 dark:border-gray-700">
+                    <div class="flex items-center space-x-3">
+                        <div class="flex h-10 w-10 items-center justify-center rounded-full bg-red-100 dark:bg-red-900/20">
+                            <svg class="h-6 w-6 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </div>
+                        <div>
+                            <h2 class="text-xl font-semibold text-gray-900 dark:text-white">Error</h2>
+                            <p class="text-sm text-gray-500 dark:text-gray-400 mt-1" id="errorMessage">An error occurred. Please try again.</p>
+                        </div>
+                    </div>
+                    <button type="button" onclick="closeErrorModal()" class="text-gray-400 transition hover:text-gray-600 dark:hover:text-gray-200">
+                        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+                <div class="px-6 py-4 flex justify-end">
+                    <button
+                        type="button"
+                        onclick="closeErrorModal()"
+                        class="inline-flex items-center justify-center rounded-xl bg-red-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
+                    >
+                        OK
+                    </button>
+                </div>
+            </div>
         </div>
 
         <!-- Cancel Modal -->
-        <div id="cancelModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-gray-900/40 px-4 py-6">
+        <div id="cancelModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-gray-900/40 backdrop-blur-sm px-4 py-6 transition-opacity" onclick="if(event.target === this) closeCancelModal()">
             <div class="relative w-full max-w-md rounded-2xl border border-gray-200 bg-white shadow-2xl dark:border-gray-700 dark:bg-gray-900">
                 <div class="flex items-start justify-between border-b border-gray-200 px-6 py-4 dark:border-gray-700">
                     <div>
@@ -310,7 +415,7 @@
                     <div class="space-y-3">
                         <button
                             type="button"
-                            onclick="submitCancel('student')"
+                            onclick="selectCancelType('student')"
                             class="w-full rounded-xl border-2 border-red-200 bg-red-50 px-4 py-3 text-left text-sm font-semibold text-red-700 transition hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-red-500 dark:border-red-800 dark:bg-red-900/20 dark:text-red-300 dark:hover:bg-red-900/30"
                         >
                             <div class="flex items-center justify-between">
@@ -324,7 +429,7 @@
 
                         <button
                             type="button"
-                            onclick="submitCancel('teacher')"
+                            onclick="selectCancelType('teacher')"
                             class="w-full rounded-xl border-2 border-red-200 bg-red-50 px-4 py-3 text-left text-sm font-semibold text-red-700 transition hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-red-500 dark:border-red-800 dark:bg-red-900/20 dark:text-red-300 dark:hover:bg-red-900/30"
                         >
                             <div class="flex items-center justify-between">
@@ -351,7 +456,7 @@
         </div>
 
         <!-- Reschedule Modal -->
-        <div id="rescheduleModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-gray-900/40 px-4 py-6">
+        <div id="rescheduleModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-gray-900/40 backdrop-blur-sm px-4 py-6 transition-opacity" onclick="if(event.target === this) closeRescheduleModal()">
             <div class="relative w-full max-w-md rounded-2xl border border-gray-200 bg-white shadow-2xl dark:border-gray-700 dark:bg-gray-900">
                 <div class="flex items-start justify-between border-b border-gray-200 px-6 py-4 dark:border-gray-700">
                     <div>
@@ -365,7 +470,7 @@
                     </button>
                 </div>
 
-                <form id="rescheduleForm" method="POST" class="space-y-6 px-6 py-6">
+                <form id="rescheduleForm" method="POST" class="space-y-6 px-6 py-6" onsubmit="submitReschedule(event)">
                     @csrf
                     @method('POST')
                     <input type="hidden" name="event_id" id="event_id">
@@ -432,33 +537,382 @@
             document.getElementById('reschedule_start_time').value = startTime;
             document.getElementById('reschedule_end_time').value = endTime;
             document.getElementById('rescheduleForm').action = `/admin/today-lessons/${eventId}/reschedule`;
-            document.getElementById('rescheduleModal').classList.remove('hidden');
-            document.getElementById('rescheduleModal').classList.add('flex');
+            const modal = document.getElementById('rescheduleModal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            // Trigger animation
+            setTimeout(() => {
+                modal.style.opacity = '1';
+            }, 10);
         }
 
         function closeRescheduleModal() {
-            document.getElementById('rescheduleModal').classList.add('hidden');
-            document.getElementById('rescheduleModal').classList.remove('flex');
+            const modal = document.getElementById('rescheduleModal');
+            modal.style.opacity = '0';
+            setTimeout(() => {
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+            }, 200);
         }
 
         function openCancelModal(eventId) {
             document.getElementById('cancel_event_id').value = eventId;
             document.getElementById('cancelForm').action = `/admin/today-lessons/${eventId}/cancel`;
-            document.getElementById('cancelModal').classList.remove('hidden');
-            document.getElementById('cancelModal').classList.add('flex');
+            const modal = document.getElementById('cancelModal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            // Trigger animation
+            setTimeout(() => {
+                modal.style.opacity = '1';
+            }, 10);
         }
 
         function closeCancelModal() {
-            document.getElementById('cancelModal').classList.add('hidden');
-            document.getElementById('cancelModal').classList.remove('flex');
+            const modal = document.getElementById('cancelModal');
+            modal.style.opacity = '0';
+            setTimeout(() => {
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+            }, 200);
         }
 
-        function submitCancel(cancelType) {
-            const eventId = document.getElementById('cancel_event_id').value;
-            document.getElementById('cancel_type').value = cancelType;
-            document.getElementById('cancelForm').action = `/admin/today-lessons/${eventId}/cancel`;
-            document.getElementById('cancelForm').submit();
+        function getCsrfToken() {
+            return document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || 
+                   document.querySelector('input[name="_token"]')?.value || '';
         }
+
+        let pendingAction = null;
+
+        function showConfirmModal(message, onConfirm) {
+            const modal = document.getElementById('confirmModal');
+            const messageEl = document.getElementById('confirmMessage');
+            const confirmBtn = document.getElementById('confirmOkBtn');
+            
+            if (messageEl) {
+                messageEl.textContent = message;
+            }
+            
+            // Remove previous event listeners
+            const newConfirmBtn = confirmBtn.cloneNode(true);
+            confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);
+            
+            // Add new event listener
+            newConfirmBtn.addEventListener('click', function() {
+                closeConfirmModal();
+                if (onConfirm) {
+                    onConfirm();
+                }
+            });
+            
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            setTimeout(() => {
+                modal.style.opacity = '1';
+            }, 10);
+        }
+
+        function closeConfirmModal() {
+            const modal = document.getElementById('confirmModal');
+            modal.style.opacity = '0';
+            setTimeout(() => {
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+            }, 200);
+        }
+
+        function showSuccessModal(message) {
+            const modal = document.getElementById('successModal');
+            const messageEl = document.getElementById('successMessage');
+            
+            if (messageEl) {
+                messageEl.textContent = message;
+            }
+            
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            setTimeout(() => {
+                modal.style.opacity = '1';
+            }, 10);
+            
+            // Auto close after 3 seconds
+            setTimeout(() => {
+                closeSuccessModal();
+            }, 3000);
+        }
+
+        function closeSuccessModal() {
+            const modal = document.getElementById('successModal');
+            modal.style.opacity = '0';
+            setTimeout(() => {
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+            }, 200);
+        }
+
+        function showErrorModal(message) {
+            const modal = document.getElementById('errorModal');
+            const messageEl = document.getElementById('errorMessage');
+            
+            if (messageEl) {
+                messageEl.textContent = message;
+            }
+            
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            setTimeout(() => {
+                modal.style.opacity = '1';
+            }, 10);
+        }
+
+        function closeErrorModal() {
+            const modal = document.getElementById('errorModal');
+            modal.style.opacity = '0';
+            setTimeout(() => {
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+            }, 200);
+        }
+
+        function selectCancelType(cancelType) {
+            closeCancelModal();
+            const eventId = document.getElementById('cancel_event_id').value;
+            const cancelTypeText = cancelType === 'student' ? 'Student' : cancelType === 'teacher' ? 'Teacher' : 'General';
+            
+            setTimeout(() => {
+                showConfirmModal(
+                    `Are you sure you want to cancel this lesson (${cancelTypeText})?`,
+                    () => {
+                        performAjaxAction(`/admin/today-lessons/${eventId}/cancel`, 'POST', {
+                            cancel_type: cancelType === 'cancelled' ? '' : cancelType,
+                            _token: getCsrfToken()
+                        }, eventId);
+                    }
+                );
+            }, 200);
+        }
+
+        function submitReschedule(e) {
+            e.preventDefault();
+            const form = document.getElementById('rescheduleForm');
+            const eventId = document.getElementById('event_id').value;
+            const date = document.getElementById('reschedule_date').value;
+            const startTime = document.getElementById('reschedule_start_time').value;
+            const endTime = document.getElementById('reschedule_end_time').value;
+            
+            showConfirmModal(
+                `Are you sure you want to reschedule this lesson to ${date} from ${startTime} to ${endTime}?`,
+                () => {
+                    const formData = new FormData(form);
+                    closeRescheduleModal();
+                    performAjaxAction(`/admin/today-lessons/${eventId}/reschedule`, 'POST', formData, eventId);
+                }
+            );
+        }
+
+        function markAsAbsent(eventId) {
+            showConfirmModal(
+                'Are you sure you want to mark this lesson as absent?',
+                () => {
+                    performAjaxAction(`/admin/today-lessons/${eventId}/absent`, 'POST', {
+                        _token: getCsrfToken()
+                    }, eventId);
+                }
+            );
+        }
+
+        function markAsAttended(eventId) {
+            showConfirmModal(
+                'Are you sure you want to mark this lesson as attended?',
+                () => {
+                    performAjaxAction(`/admin/today-lessons/${eventId}/attended`, 'POST', {
+                        _token: getCsrfToken()
+                    }, eventId);
+                }
+            );
+        }
+
+        function performAjaxAction(url, method, data, eventId) {
+            const formData = data instanceof FormData ? data : new FormData();
+            if (!(data instanceof FormData)) {
+                Object.keys(data).forEach(key => {
+                    formData.append(key, data[key]);
+                });
+            }
+
+            // Add loading state
+            const row = document.querySelector(`tr[data-event-id="${eventId}"]`);
+            if (row) {
+                row.style.opacity = '0.6';
+                row.style.pointerEvents = 'none';
+            }
+
+            fetch(url, {
+                method: method,
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': getCsrfToken()
+                }
+            })
+            .then(response => {
+                if (!response.ok) {
+                    return response.json().then(err => Promise.reject(err));
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    showSuccessModal(data.message);
+                    if (data.event) {
+                        updateEventRow(eventId, data.event);
+                    }
+                } else {
+                    showErrorModal(data.message || 'An error occurred');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                const errorMessage = error.message || error.errors ? 
+                    (typeof error.errors === 'object' ? Object.values(error.errors).flat().join(', ') : error.message) : 
+                    'An error occurred. Please try again.';
+                showErrorModal(errorMessage);
+            })
+            .finally(() => {
+                if (row) {
+                    row.style.opacity = '1';
+                    row.style.pointerEvents = '';
+                }
+            });
+        }
+
+        function updateEventRow(eventId, eventData) {
+            const row = document.querySelector(`tr[data-event-id="${eventId}"]`);
+            if (!row) return;
+
+            // Update status badge
+            const statusCell = row.querySelector('td:nth-child(6)');
+            if (statusCell) {
+                const statusBadge = statusCell.querySelector('span');
+                if (statusBadge) {
+                    statusBadge.className = getStatusBadgeClass(eventData.status);
+                    statusBadge.textContent = getStatusText(eventData.status);
+                }
+            }
+
+            // Update date
+            const dateCell = row.querySelector('td:nth-child(1)');
+            if (dateCell) {
+                dateCell.innerHTML = `
+                    <div class="text-base font-medium text-gray-900 dark:text-white">${eventData.start_at}</div>
+                    <div class="text-sm text-gray-500 dark:text-gray-400">${eventData.start_at_day}</div>
+                `;
+            }
+
+            // Update time
+            const timeCell = row.querySelector('td:nth-child(2)');
+            if (timeCell) {
+                timeCell.innerHTML = `
+                    <div class="text-base font-medium text-gray-900 dark:text-white">${eventData.time}</div>
+                `;
+            }
+
+            // Update row background color based on status
+            row.className = getRowClass(eventData.status);
+
+            // Update actions column background
+            const actionsCell = row.querySelector('td:last-child');
+            if (actionsCell) {
+                actionsCell.className = getActionsCellClass(eventData.status);
+            }
+
+            // Update cancel button visibility
+            const cancelButton = row.querySelector('button[onclick*="openCancelModal"]');
+            const cancelText = row.querySelector('.text-red-700');
+            if (eventData.status === 'cancelled' || eventData.status === 'cancelled_student' || eventData.status === 'cancelled_teacher') {
+                if (cancelButton) cancelButton.closest('.relative').style.display = 'none';
+                if (!cancelText) {
+                    const actionsDiv = row.querySelector('td:last-child .flex');
+                    const cancelTextDiv = document.createElement('div');
+                    cancelTextDiv.className = 'text-sm font-medium text-red-700 dark:text-red-300';
+                    cancelTextDiv.textContent = getStatusText(eventData.status);
+                    actionsDiv.insertBefore(cancelTextDiv, actionsDiv.firstChild);
+                } else {
+                    cancelText.textContent = getStatusText(eventData.status);
+                }
+            } else {
+                if (cancelText) cancelText.remove();
+                if (cancelButton) cancelButton.closest('.relative').style.display = '';
+            }
+        }
+
+        function getStatusBadgeClass(status) {
+            const baseClass = 'inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-medium ';
+            switch(status) {
+                case 'scheduled':
+                    return baseClass + 'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-300';
+                case 'cancelled':
+                case 'cancelled_student':
+                case 'cancelled_teacher':
+                    return baseClass + 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-300';
+                case 'rescheduled':
+                    return baseClass + 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-300';
+                case 'absent':
+                    return baseClass + 'bg-orange-100 text-orange-800 dark:bg-orange-900/20 dark:text-orange-300';
+                case 'attended':
+                    return baseClass + 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300';
+                default:
+                    return baseClass + 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300';
+            }
+        }
+
+        function getStatusText(status) {
+            switch(status) {
+                case 'cancelled_student':
+                    return 'Cancelled (Student)';
+                case 'cancelled_teacher':
+                    return 'Cancelled (Teacher)';
+                default:
+                    return status.charAt(0).toUpperCase() + status.slice(1);
+            }
+        }
+
+        function getRowClass(status) {
+            const baseClass = 'transition-colors group ';
+            switch(status) {
+                case 'cancelled':
+                case 'cancelled_student':
+                case 'cancelled_teacher':
+                    return baseClass + 'bg-red-200 dark:bg-red-900/60 hover:bg-red-300 dark:hover:bg-red-900/80';
+                case 'absent':
+                    return baseClass + 'bg-orange-200 dark:bg-orange-900/60 hover:bg-orange-300 dark:hover:bg-orange-900/80';
+                case 'rescheduled':
+                    return baseClass + 'bg-yellow-200 dark:bg-yellow-900/60 hover:bg-yellow-300 dark:hover:bg-yellow-900/80';
+                case 'attended':
+                    return baseClass + 'bg-green-200 dark:bg-green-900/60 hover:bg-green-300 dark:hover:bg-green-900/80';
+                default:
+                    return baseClass + 'hover:bg-gray-50 dark:hover:bg-gray-700/50';
+            }
+        }
+
+        function getActionsCellClass(status) {
+            const baseClass = 'px-6 py-4 whitespace-nowrap text-right text-sm font-medium sticky right-0 z-10 border-l border-gray-200 dark:border-gray-600 ';
+            switch(status) {
+                case 'cancelled':
+                case 'cancelled_student':
+                case 'cancelled_teacher':
+                    return baseClass + 'bg-red-200 dark:bg-red-900 group-hover:bg-red-300 dark:group-hover:bg-red-800';
+                case 'absent':
+                    return baseClass + 'bg-orange-200 dark:bg-orange-900 group-hover:bg-orange-300 dark:group-hover:bg-orange-800';
+                case 'rescheduled':
+                    return baseClass + 'bg-yellow-200 dark:bg-yellow-900 group-hover:bg-yellow-300 dark:group-hover:bg-yellow-800';
+                case 'attended':
+                    return baseClass + 'bg-green-200 dark:bg-green-900 group-hover:bg-green-300 dark:group-hover:bg-green-800';
+                default:
+                    return baseClass + 'bg-white dark:bg-gray-800 group-hover:bg-gray-50 dark:group-hover:bg-gray-700';
+            }
+        }
+
     </script>
 </x-app-layout>
 
