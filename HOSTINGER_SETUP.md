@@ -67,10 +67,11 @@ php artisan migrate:status
 - **Solution**: Verify `SESSION_SECURE_COOKIE=true` if using HTTPS
 - **Solution**: Check that `APP_URL` matches your actual domain
 
-#### Issue: CSRF token mismatch
-- **Solution**: Ensure `APP_URL` in .env matches your actual domain (with https://)
-- **Solution**: Clear all caches after deployment
-- **Solution**: Make sure cookies can be set (check browser console for cookie errors)
+#### Issue: CSRF token mismatch (or being asked to delete cookies)
+- **Solution**: Ensure `APP_URL` in .env matches **exactly** the URL you use in the browser (e.g. `https://yourdomain.com`). If you use `http://localhost`, open `http://localhost`, not `http://127.0.0.1`.
+- **Solution**: On production over HTTPS, set `SESSION_SECURE_COOKIE=true` in .env.
+- **Solution**: Clear all caches after deployment: `php artisan config:clear && php artisan cache:clear`
+- **Solution**: The app now auto-reloads on 419 (CSRF mismatch) to get a fresh token—you should no longer need to delete cookies manually. If it keeps happening, fix `APP_URL` and session settings above.
 
 #### Issue: Getting logged out immediately
 - **Solution**: Increase `SESSION_LIFETIME` (in minutes, default is 120)
