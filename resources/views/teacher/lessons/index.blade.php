@@ -1,17 +1,11 @@
-<x-app-layout pageTitle="My Lessons">
+<x-app-layout pageTitle="My Classes">
     <div class="space-y-6">
         <!-- Header -->
         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between">
             <div>
-                <h2 class="text-2xl font-bold text-gray-900 dark:text-white">My Lessons</h2>
-                <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">Manage and track all your lessons</p>
+                <h2 class="text-2xl font-bold text-gray-900 dark:text-white">My Classes</h2>
+                <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">View your classes and their status</p>
             </div>
-            <a href="{{ route('teacher.lessons.create') }}" class="mt-4 sm:mt-0 inline-flex items-center px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white text-sm font-medium rounded-lg shadow-sm hover:from-indigo-700 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all">
-                <svg class="mr-2 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                </svg>
-                Add New Lesson
-            </a>
         </div>
 
         <!-- Filters & Summary -->
@@ -117,7 +111,6 @@
                             <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Lesson #</th>
                             <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Cumulative</th>
                             <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Duration</th>
-                            <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Actions</th>
                         </tr>
                     </thead>
                     <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
@@ -211,38 +204,15 @@
                                         {{ intdiv($lesson->duration_minutes, 60) }}h {{ $lesson->duration_minutes % 60 }}m
                                     </span>
                                 </td>
-                                <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                    <div class="flex items-center justify-end space-x-2">
-                                        <a href="{{ route('teacher.lessons.edit', $lesson) }}" class="text-indigo-600 hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-300 transition-colors">
-                                            <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                                            </svg>
-                                        </a>
-                                        <form action="{{ route('teacher.lessons.destroy', $lesson) }}" method="POST" class="inline" onsubmit="return confirm('Are you sure you want to delete this lesson?')">
-                                            @csrf
-                                            @method('DELETE')
-                                            <button type="submit" class="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300 transition-colors">
-                                                <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                                </svg>
-                                            </button>
-                                        </form>
-                                    </div>
-                                </td>
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="8" class="px-6 py-12 text-center">
+                                <td colspan="7" class="px-6 py-12 text-center">
                                     <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
                                     </svg>
-                                    <h3 class="mt-2 text-sm font-medium text-gray-900 dark:text-white">No lessons found</h3>
-                                    <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Get started by creating your first lesson.</p>
-                                    <div class="mt-6">
-                                        <a href="{{ route('teacher.lessons.create') }}" class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700">
-                                            Add Lesson
-                                        </a>
-                                    </div>
+                                    <h3 class="mt-2 text-sm font-medium text-gray-900 dark:text-white">No classes found</h3>
+                                    <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">No lessons match the selected filters.</p>
                                 </td>
                             </tr>
                         @endforelse
