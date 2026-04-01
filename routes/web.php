@@ -24,6 +24,13 @@ Route::get('/', function () {
     return redirect()->route('login');
 });
 
+// Clear session/cookies and redirect to login (fixes "page isn't working" when session is stale)
+Route::get('/clear-session', function () {
+    request()->session()->invalidate();
+    request()->session()->regenerateToken();
+    return redirect()->route('login')->with('status', 'Session cleared. Please log in again.');
+})->name('clear-session');
+
 // Shared routes accessible by admin, support, and accountant
 Route::middleware(['auth','role:admin|support|accountant'])->prefix('admin')->group(function () {
     Route::get('/', function(){ return view('admin.dashboard'); })->name('admin.dashboard');

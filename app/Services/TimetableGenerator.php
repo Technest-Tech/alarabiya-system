@@ -91,20 +91,10 @@ class TimetableGenerator
 
         // Use teacher timezone if available, otherwise use student timezone
         $teacherTimezone = $timetable->teacher_timezone ?? $timetable->timezone ?? config('app.timezone');
-        $studentTimezone = $timetable->timezone;
 
-        // Get total timezone adjustment hours (sum of all adjustments)
-        $adjustmentHours = $this->getTotalAdjustmentHours($studentTimezone ?? $teacherTimezone);
+        // No adjustment recalculation needed here — teacher times are
+        // already adjusted directly in the timetable record by the service
 
-        // For Egypt timezone (teacher_timezone), don't recalculate student times at all
-        // For other timezones, apply adjustment to student times only
-        $isEgyptTimezone = $teacherTimezone === 'Africa/Cairo';
-        
-        if (!$isEgyptTimezone) {
-            // Only recalculate student times for non-Egypt timezones using total adjustments
-            $this->calculateStudentTimes($timetable, $teacherTimezone, $studentTimezone, $adjustmentHours);
-        }
-        // For Egypt, leave student times unchanged
 
         // Check if using per-day times
         $dayTimes = $timetable->day_times;

@@ -19,7 +19,7 @@ class PackageController extends Controller
         $year = (int) $request->get('year', now()->year);
         $search = $request->get('search', '');
         
-        $query = Student::with(['teacher.user', 'currentPackage', 'packages' => function($query) {
+        $query = Student::active()->with(['teacher.user', 'currentPackage', 'packages' => function($query) {
             $query->whereIn('status', ['completed', 'paid']);
         }]);
         

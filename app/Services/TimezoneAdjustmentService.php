@@ -17,6 +17,8 @@ class TimezoneAdjustmentService
 
     /**
      * Apply timezone adjustment to all timetables in the given timezone.
+     * Always adjusts teacher/class times (start_time, end_time, day_times)
+     * and keeps student times (student_time_from, student_time_to) unchanged.
      */
     public function applyAdjustment(string $timezone, int $adjustmentHours, int $userId): void
     {
@@ -29,46 +31,61 @@ class TimezoneAdjustmentService
                 'applied_by' => $userId,
             ]);
 
-            $isEgyptTimezone = $timezone === 'Africa/Cairo';
-
-            // For Egypt: query timetables where teacher_timezone is Egypt (since we adjust class times)
-            // For other timezones: query timetables where student timezone matches
-            if ($isEgyptTimezone) {
-                $timetables = Timetable::where('teacher_timezone', $timezone)
-                    ->where('is_active', true)
-                    ->get();
-            } else {
-                $timetables = Timetable::where('timezone', $timezone)
-                    ->where('is_active', true)
-                    ->get();
-            }
+            // Always query by student timezone
+            $timetables = Timetable::where('timezone', $timezone)
+                ->where('is_active', true)
+                ->get();
 
             foreach ($timetables as $timetable) {
-                $teacherTimezone = $timetable->teacher_timezone ?? $timetable->timezone ?? config('app.timezone');
-                $studentTimezone = $timetable->timezone;
+                // Shift default start_time and end_time
+                $startTime = Carbon::createFromFormat('H:i:s', $timetable->start_time);
+                $endTime = Carbon::createFromFormat('H:i:s', $timetable->end_time);
 
-                if ($isEgyptTimezone) {
-                    // For Egypt timezone: adjust class/teacher times only, DON'T update student times at all
-                    $startTime = Carbon::createFromFormat('H:i:s', $timetable->start_time);
-                    $endTime = Carbon::createFromFormat('H:i:s', $timetable->end_time);
-                    
-                    $startTime->addHours($adjustmentHours);
-                    $endTime->addHours($adjustmentHours);
-                    
-                    $timetable->start_time = $startTime->format('H:i:s');
-                    $timetable->end_time = $endTime->format('H:i:s');
-                    
-                    // Do NOT recalculate student times - leave them unchanged
-                } else {
-                    // For non-Egypt timezones: adjust student times only, NOT class/teacher times
-                    // Recalculate student times using TOTAL of all adjustments (not just the new one)
-                    $totalAdjustmentHours = $this->generator->getTotalAdjustmentHours($timezone);
-                    $this->generator->calculateStudentTimes($timetable, $teacherTimezone, $studentTimezone, $totalAdjustmentHours);
+                $startTime->addHours($adjustmentHours);
+                $endTime->addHours($adjustmentHours);
+
+                $timetable->start_time = $startTime->format('H:i:s');
+                $timetable->end_time = $endTime->format('H:i:s');
+
+                // Also shift per-day times (day_times JSON) if present
+                $dayTimes = $timetable->day_times;
+                if (!empty($dayTimes) && is_array($dayTimes)) {
+                    $adjustedDayTimes = [];
+                    foreach ($dayTimes as $day => $dayData) {
+                        // Handle both formats: array of slots or single slot object
+                        if (isset($dayData[0])) {
+                            // Array of slots
+                            $adjustedSlots = [];
+                            foreach ($dayData as $slot) {
+                                $slotStart = Carbon::createFromFormat('H:i:s', $slot['start_time']);
+                                $slotEnd = Carbon::createFromFormat('H:i:s', $slot['end_time']);
+                                $slotStart->addHours($adjustmentHours);
+                                $slotEnd->addHours($adjustmentHours);
+                                $adjustedSlots[] = [
+                                    'start_time' => $slotStart->format('H:i:s'),
+                                    'end_time' => $slotEnd->format('H:i:s'),
+                                ];
+                            }
+                            $adjustedDayTimes[$day] = $adjustedSlots;
+                        } elseif (isset($dayData['start_time'])) {
+                            // Single slot object
+                            $slotStart = Carbon::createFromFormat('H:i:s', $dayData['start_time']);
+                            $slotEnd = Carbon::createFromFormat('H:i:s', $dayData['end_time']);
+                            $slotStart->addHours($adjustmentHours);
+                            $slotEnd->addHours($adjustmentHours);
+                            $adjustedDayTimes[$day] = [
+                                'start_time' => $slotStart->format('H:i:s'),
+                                'end_time' => $slotEnd->format('H:i:s'),
+                            ];
+                        }
+                    }
+                    $timetable->day_times = $adjustedDayTimes;
                 }
-                
+
+                // Student times (student_time_from, student_time_to) are NOT touched
                 $timetable->save();
 
-                // Regenerate events with new adjustment
+                // Regenerate future events with the updated teacher/class times
                 $this->generator->regenerate($timetable->fresh());
             }
         });

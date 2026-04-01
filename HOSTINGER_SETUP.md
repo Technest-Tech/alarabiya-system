@@ -83,9 +83,16 @@ php artisan migrate:status
 If you're using a subdomain or specific path, you may need:
 
 ```env
-SESSION_DOMAIN=.yourdomain.com  # Note the leading dot for subdomains
+SESSION_DOMAIN=.yourdomain.com  # Note the leading dot for subdomains (e.g. .technest-agency.com for alarabiya.technest-agency.com)
 SESSION_PATH=/  # Or your specific path
 ```
+
+#### Issue: "This page isn't working" / need to delete cookies often
+- **Cause**: Stale or corrupt session data, or cookie domain mismatch when using a subdomain.
+- **Solution**: Set `SESSION_DOMAIN=.yourdomain.com` (with leading dot) so the session cookie is valid for the subdomain.
+- **Solution**: Set `APP_ENV=production` and `APP_DEBUG=false` so HTTPS and secure cookies behave correctly.
+- **Solution**: Clear old sessions on the server: `php artisan tinker --execute="DB::table('sessions')->truncate();"`
+- **Solution**: Tell users they can visit **/clear-session** to reset their session without manually clearing browser cookies (then log in again).
 
 ### Testing
 

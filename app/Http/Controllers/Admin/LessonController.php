@@ -78,7 +78,7 @@ class LessonController extends Controller
         $pendingCount = (clone $statsQuery)->where('is_pending', true)->count();
 
         // Get students and teachers for filters
-        $students = Student::orderBy('name')->get();
+        $students = Student::active()->orderBy('name')->get();
         $teachers = Teacher::with('user')->get();
 
         return view('admin.lessons.index', compact(
@@ -94,7 +94,7 @@ class LessonController extends Controller
      */
     public function create()
     {
-        $students = Student::where('status','active')->orderBy('name')->get();
+        $students = Student::active()->orderBy('name')->get();
         $teachers = Teacher::with('user')->get();
         return view('admin.lessons.create', compact('students','teachers'));
     }
@@ -177,7 +177,7 @@ class LessonController extends Controller
      */
     public function edit(Lesson $lesson)
     {
-        $students = Student::orderBy('name')->get();
+        $students = Student::active()->orderBy('name')->get();
         $teachers = Teacher::with('user')->get();
         return view('admin.lessons.edit', compact('lesson','students','teachers'));
     }

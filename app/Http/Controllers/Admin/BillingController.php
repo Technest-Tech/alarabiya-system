@@ -55,7 +55,7 @@ class BillingController extends Controller
             'automaticBillings' => $automaticBillings,
             'manualBillings' => $manualBillings,
             'availableMonths' => $availableMonths,
-            'students' => Student::orderBy('name')->get(),
+            'students' => Student::active()->orderBy('name')->get(),
         ]);
     }
 

@@ -72,7 +72,8 @@ class LessonController extends Controller
         $totalMinutes = $totalMinutesQuery->sum('duration_minutes');
         
         // Get all students assigned to this teacher
-        $students = Student::where('assigned_teacher_id', $teacher->id)
+        $students = Student::active()
+            ->where('assigned_teacher_id', $teacher->id)
             ->orderBy('name')
             ->get();
         
@@ -92,7 +93,10 @@ class LessonController extends Controller
     public function create()
     {
         $teacher = Auth::user()->teacher;
-        $students = Student::where('assigned_teacher_id', $teacher->id)->orderBy('name')->get();
+        $students = Student::active()
+            ->where('assigned_teacher_id', $teacher->id)
+            ->orderBy('name')
+            ->get();
         return view('teacher.lessons.create', compact('students'));
     }
 
@@ -180,7 +184,10 @@ class LessonController extends Controller
     {
         $teacher = Auth::user()->teacher;
         abort_if($lesson->teacher_id !== $teacher->id, 403);
-        $students = Student::where('assigned_teacher_id', $teacher->id)->orderBy('name')->get();
+        $students = Student::active()
+            ->where('assigned_teacher_id', $teacher->id)
+            ->orderBy('name')
+            ->get();
         return view('teacher.lessons.edit', compact('lesson','students'));
     }
 

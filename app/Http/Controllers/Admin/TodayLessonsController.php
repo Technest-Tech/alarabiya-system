@@ -17,7 +17,9 @@ class TodayLessonsController extends Controller
 {
     public function index(Request $request): View
     {
-        $timezone = config('app.timezone');
+        // Use Cairo timezone for day boundaries so the admin sees classes
+        // from midnight-to-midnight Cairo time, not UTC
+        $timezone = 'Africa/Cairo';
         $now = Carbon::now($timezone);
 
         $filters = [
@@ -39,6 +41,7 @@ class TodayLessonsController extends Controller
         }
 
         $query = TimetableEvent::with(['student', 'teacher.user', 'timetable'])
+            ->whereHas('student', fn ($q) => $q->where('status', 'active'))
             ->when($filters['student_id'], fn ($q) => $q->where('student_id', $filters['student_id']))
             ->when($filters['teacher_id'], fn ($q) => $q->where('teacher_id', $filters['teacher_id']));
 
@@ -112,7 +115,7 @@ class TodayLessonsController extends Controller
             'previousDay' => $previousDay,
             'nextDay' => $nextDay,
             'isToday' => $isToday,
-            'students' => Student::orderBy('name')->get(),
+            'students' => Student::active()->orderBy('name')->get(),
             'teachers' => Teacher::with('user')->get()->sortBy(fn (Teacher $teacher) => strtolower(optional($teacher->user)->name ?? '')),
             'filters' => $filters,
         ]);

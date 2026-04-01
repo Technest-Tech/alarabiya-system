@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Builder;
 
 class Student extends Model
 {
@@ -20,6 +21,11 @@ class Student extends Model
     public function teacher(): BelongsTo
     {
         return $this->belongsTo(Teacher::class, 'assigned_teacher_id');
+    }
+
+    public function scopeActive(Builder $query): Builder
+    {
+        return $query->where('status', 'active');
     }
 
     public function lessons(): HasMany

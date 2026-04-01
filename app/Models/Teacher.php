@@ -22,7 +22,9 @@ class Teacher extends Model
 
     public function students(): HasMany
     {
-        return $this->hasMany(Student::class, 'assigned_teacher_id');
+        // Only active students should be visible in teachers' day-to-day flows.
+        return $this->hasMany(Student::class, 'assigned_teacher_id')
+            ->where('status', 'active');
     }
 
     public function lessons(): HasMany

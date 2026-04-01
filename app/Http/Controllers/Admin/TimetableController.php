@@ -31,6 +31,7 @@ class TimetableController extends Controller
         ];
 
         $query = Timetable::with(['student', 'teacher.user'])
+            ->whereHas('student', fn ($q) => $q->where('status', 'active'))
             ->latest();
 
         if ($filters['student_id']) {
@@ -51,7 +52,7 @@ class TimetableController extends Controller
 
         $timetables = $query->paginate(15)->withQueryString();
 
-        $students = Student::orderBy('name')->get();
+        $students = Student::active()->orderBy('name')->get();
         $teachers = Teacher::with('user')->get()->sortBy(function (Teacher $teacher) {
             return strtolower(optional($teacher->user)->name ?? '');
         });

@@ -36,7 +36,7 @@ class FamilyController extends Controller
     public function create(): View
     {
         return view('admin.families.create', [
-            'students' => Student::orderBy('name')->get(),
+            'students' => Student::active()->orderBy('name')->get(),
         ]);
     }
 
@@ -65,7 +65,7 @@ class FamilyController extends Controller
     {
         return view('admin.families.edit', [
             'family' => $family->load('students'),
-            'students' => Student::orderBy('name')->get(),
+            'students' => Student::active()->orderBy('name')->get(),
         ]);
     }
 
@@ -96,8 +96,10 @@ class FamilyController extends Controller
 
         $summary = $this->buildMonthlySummary($family, $monthDate);
 
-        // Get family student IDs
-        $familyStudentIds = $family->students()->pluck('students.id');
+        // Use only active students in the classes section
+        $familyStudentIds = $family->students()
+            ->where('status', 'active')
+            ->pluck('students.id');
 
         // Filters for classes section
         $classFilters = [
@@ -110,6 +112,7 @@ class FamilyController extends Controller
         // Build query for timetable events
         $eventsQuery = TimetableEvent::with(['student', 'teacher.user', 'timetable'])
             ->whereIn('student_id', $familyStudentIds)
+            ->whereHas('student', fn ($q) => $q->where('status', 'active'))
             ->where(function ($query) {
                 $query->whereNull('status')
                     ->orWhereIn('status', ['scheduled', 'rescheduled']);

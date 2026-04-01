@@ -50,7 +50,7 @@ class TimetableCalendarController extends Controller
             'teacher_id' => $request->integer('teacher_id'),
         ];
 
-        $students = Student::orderBy('name')->get();
+        $students = Student::active()->orderBy('name')->get();
         $teachers = Teacher::with('user')->get()->sortBy(function (Teacher $teacher) {
             return strtolower(optional($teacher->user)->name ?? '');
         });
@@ -72,6 +72,7 @@ class TimetableCalendarController extends Controller
         $teacherId = $request->query('teacher_id');
 
         $events = TimetableEvent::with(['student', 'teacher.user', 'timetable'])
+            ->whereHas('student', fn ($q) => $q->where('status', 'active'))
             ->whereHas('timetable', function ($query) {
                 $query->where(function ($q) {
                     // Include active timetables
@@ -488,6 +489,7 @@ class TimetableCalendarController extends Controller
         $end = Carbon::parse($rangeEnd)->endOfDay()->utc();
 
         $events = TimetableEvent::with(['student', 'teacher.user'])
+            ->whereHas('student', fn ($q) => $q->where('status', 'active'))
             ->whereBetween('start_at', [$start, $end])
             ->when($studentId, fn ($query) => $query->where('student_id', $studentId))
             ->when($teacherId, fn ($query) => $query->where('teacher_id', $teacherId))

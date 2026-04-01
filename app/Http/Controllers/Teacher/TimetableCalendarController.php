@@ -26,7 +26,8 @@ class TimetableCalendarController extends Controller
         ];
 
         // Get students assigned to this teacher
-        $students = Student::where('assigned_teacher_id', $teacher->id)
+        $students = Student::active()
+            ->where('assigned_teacher_id', $teacher->id)
             ->orderBy('name')
             ->get();
 
@@ -52,6 +53,7 @@ class TimetableCalendarController extends Controller
 
         $events = TimetableEvent::with(['student', 'teacher.user', 'timetable'])
             ->where('teacher_id', $teacher->id)
+            ->whereHas('student', fn ($q) => $q->where('status', 'active'))
             ->whereHas('timetable', function ($query) {
                 $query->where('is_active', true)
                     ->where(function ($q) {
