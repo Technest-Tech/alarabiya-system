@@ -67,19 +67,26 @@ class TodayLessonsController extends Controller
 
                 $teacherStart = $event->start_at->clone()->setTimezone($teacherTimezone);
                 $teacherEnd = $event->end_at->clone()->setTimezone($teacherTimezone);
-                
-                // If using manual time difference and no student timezone, use stored student times
-                if ($timetable && $timetable->use_manual_time_diff && !$studentTimezone && $timetable->student_time_from && $timetable->student_time_to) {
+
+                // Timezone adjustments only shift teacher-side times (start_time/end_time/day_times).
+                // student_time_from / student_time_to are deliberately left untouched by the service.
+                // Always prefer the stored student times from the timetable so that any adjustment
+                // applied to the teacher does NOT bleed into the student time display.
+                if ($timetable && $timetable->student_time_from && $timetable->student_time_to) {
+                    // Use the stored, adjustment-immune student times directly.
                     $studentStart = Carbon::today()->setTimeFromTimeString($timetable->student_time_from);
-                    $studentEnd = Carbon::today()->setTimeFromTimeString($timetable->student_time_to);
-                    $studentTimezone = 'undefined';
+                    $studentEnd   = Carbon::today()->setTimeFromTimeString($timetable->student_time_to);
+                    $studentTimezone = $studentTimezone ?? 'undefined';
                 } elseif ($studentTimezone) {
+                    // No stored student times yet – derive from the event UTC time converted to
+                    // the student's IANA timezone (this path is only hit for brand-new timetables
+                    // that have never had calculateStudentTimes() run on them).
                     $studentStart = $event->start_at->clone()->setTimezone($studentTimezone);
-                    $studentEnd = $event->end_at->clone()->setTimezone($studentTimezone);
+                    $studentEnd   = $event->end_at->clone()->setTimezone($studentTimezone);
                 } else {
-                    // Fallback to teacher timezone
-                    $studentStart = $teacherStart;
-                    $studentEnd = $teacherEnd;
+                    // Absolute fallback: no student timezone, no stored times – show teacher time.
+                    $studentStart    = $teacherStart;
+                    $studentEnd      = $teacherEnd;
                     $studentTimezone = $teacherTimezone;
                 }
 
@@ -296,19 +303,26 @@ class TodayLessonsController extends Controller
 
         $teacherStart = $event->start_at->clone()->setTimezone($teacherTimezone);
         $teacherEnd = $event->end_at->clone()->setTimezone($teacherTimezone);
-        
-        // If using manual time difference and no student timezone, use stored student times
-        if ($timetable && $timetable->use_manual_time_diff && !$studentTimezone && $timetable->student_time_from && $timetable->student_time_to) {
-            $studentStart = Carbon::today()->setTimeFromTimeString($timetable->student_time_from);
-            $studentEnd = Carbon::today()->setTimeFromTimeString($timetable->student_time_to);
-            $studentTimezone = 'undefined';
+
+        // Timezone adjustments only shift teacher-side times (start_time/end_time/day_times).
+        // student_time_from / student_time_to are deliberately left untouched by the service.
+        // Always prefer the stored student times from the timetable so that any adjustment
+        // applied to the teacher does NOT bleed into the student time display.
+        if ($timetable && $timetable->student_time_from && $timetable->student_time_to) {
+            // Use the stored, adjustment-immune student times directly.
+            $studentStart    = Carbon::today()->setTimeFromTimeString($timetable->student_time_from);
+            $studentEnd      = Carbon::today()->setTimeFromTimeString($timetable->student_time_to);
+            $studentTimezone = $studentTimezone ?? 'undefined';
         } elseif ($studentTimezone) {
+            // No stored student times yet – derive from the event UTC time converted to
+            // the student's IANA timezone (this path is only hit for brand-new timetables
+            // that have never had calculateStudentTimes() run on them).
             $studentStart = $event->start_at->clone()->setTimezone($studentTimezone);
-            $studentEnd = $event->end_at->clone()->setTimezone($studentTimezone);
+            $studentEnd   = $event->end_at->clone()->setTimezone($studentTimezone);
         } else {
-            // Fallback to teacher timezone
-            $studentStart = $teacherStart;
-            $studentEnd = $teacherEnd;
+            // Absolute fallback: no student timezone, no stored times – show teacher time.
+            $studentStart    = $teacherStart;
+            $studentEnd      = $teacherEnd;
             $studentTimezone = $teacherTimezone;
         }
 
