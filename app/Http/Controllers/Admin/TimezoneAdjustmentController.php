@@ -16,34 +16,33 @@ class TimezoneAdjustmentController extends Controller
     ) {
     }
 
-    /**
-     * Display a listing of the resource.
-     */
     public function index(): View
     {
         $adjustments = TimezoneAdjustment::with('appliedBy')
             ->latest('applied_at')
-            ->paginate(15);
+            ->paginate(20);
 
         return view('admin.timezone-adjustments.index', [
-            'pageTitle' => 'Timezone Adjustments',
-            'adjustments' => $adjustments,
+            'pageTitle'       => 'Timezone Adjustments',
+            'adjustments'     => $adjustments,
             'timezoneOptions' => config('timetables.timezones', []),
         ]);
     }
 
-    /**
-     * Store a newly created resource in storage.
-     */
     public function store(StoreTimezoneAdjustmentRequest $request): RedirectResponse
     {
+        $data = $request->validated();
+
         $this->service->applyAdjustment(
-            $request->validated()['timezone'],
-            $request->validated()['adjustment_hours'],
-            auth()->id()
+            $data['timezone'],
+            $data['adjustment_hours'],
+            auth()->id(),
+            $data['target']
         );
 
+        $targetLabel = $data['target'] === 'teacher' ? 'Teacher' : 'Student';
+
         return redirect()->route('timezone-adjustments.index')
-            ->with('status', 'Timezone adjustment applied successfully.');
+            ->with('status', "{$targetLabel} timezone adjustment applied successfully.");
     }
 }

@@ -16,99 +16,110 @@ class TimezoneAdjustmentService
     }
 
     /**
-     * Apply timezone adjustment to all timetables in the given timezone.
+     * Apply timezone adjustment to timetables.
      *
-     * Shifts both teacher/class times (start_time, end_time, day_times) AND
-     * student times (student_time_from, student_time_to) by the same number
-     * of hours.
-     *
-     * When a country shifts its clocks (e.g. UAE +1 for DST), the real-world
-     * lesson slot moves for everyone — teacher and student display times
-     * both advance together.
+     * @param string $timezone  IANA timezone identifier (e.g. 'Asia/Dubai')
+     * @param int    $adjustmentHours  +1 or -1
+     * @param int    $userId    ID of the admin applying the change
+     * @param string $target    'student' – shifts student_time_from/student_time_to
+     *                          'teacher' – shifts start_time/end_time/day_times & regenerates events
      */
-    public function applyAdjustment(string $timezone, int $adjustmentHours, int $userId): void
+    public function applyAdjustment(string $timezone, int $adjustmentHours, int $userId, string $target = 'student'): void
     {
-        DB::transaction(function () use ($timezone, $adjustmentHours, $userId) {
-            // Create adjustment record
+        DB::transaction(function () use ($timezone, $adjustmentHours, $userId, $target) {
+            // Record the adjustment
             TimezoneAdjustment::create([
                 'timezone'         => $timezone,
+                'target'           => $target,
                 'adjustment_hours' => $adjustmentHours,
                 'applied_at'       => now(),
                 'applied_by'       => $userId,
             ]);
 
-            // Query timetables by the student timezone column
-            $timetables = Timetable::where('timezone', $timezone)
-                ->where('is_active', true)
-                ->get();
-
-            foreach ($timetables as $timetable) {
-                // ── Teacher / class times ─────────────────────────────────────────
-                // Shift the default start_time and end_time stored on the timetable.
-                $startTime = Carbon::createFromFormat('H:i:s', $timetable->start_time);
-                $endTime   = Carbon::createFromFormat('H:i:s', $timetable->end_time);
-
-                $startTime->addHours($adjustmentHours);
-                $endTime->addHours($adjustmentHours);
-
-                $timetable->start_time = $startTime->format('H:i:s');
-                $timetable->end_time   = $endTime->format('H:i:s');
-
-                // Also shift per-day times (day_times JSON) if present
-                $dayTimes = $timetable->day_times;
-                if (!empty($dayTimes) && is_array($dayTimes)) {
-                    $adjustedDayTimes = [];
-                    foreach ($dayTimes as $day => $dayData) {
-                        // Handle both formats: array of slots or single slot object
-                        if (isset($dayData[0])) {
-                            // Array of slots
-                            $adjustedSlots = [];
-                            foreach ($dayData as $slot) {
-                                $slotStart = Carbon::createFromFormat('H:i:s', $slot['start_time']);
-                                $slotEnd   = Carbon::createFromFormat('H:i:s', $slot['end_time']);
-                                $slotStart->addHours($adjustmentHours);
-                                $slotEnd->addHours($adjustmentHours);
-                                $adjustedSlots[] = [
-                                    'start_time' => $slotStart->format('H:i:s'),
-                                    'end_time'   => $slotEnd->format('H:i:s'),
-                                ];
-                            }
-                            $adjustedDayTimes[$day] = $adjustedSlots;
-                        } elseif (isset($dayData['start_time'])) {
-                            // Single slot object
-                            $slotStart = Carbon::createFromFormat('H:i:s', $dayData['start_time']);
-                            $slotEnd   = Carbon::createFromFormat('H:i:s', $dayData['end_time']);
-                            $slotStart->addHours($adjustmentHours);
-                            $slotEnd->addHours($adjustmentHours);
-                            $adjustedDayTimes[$day] = [
-                                'start_time' => $slotStart->format('H:i:s'),
-                                'end_time'   => $slotEnd->format('H:i:s'),
-                            ];
-                        }
-                    }
-                    $timetable->day_times = $adjustedDayTimes;
-                }
-
-                // ── Student times ─────────────────────────────────────────────────
-                // Shift student_time_from / student_time_to by the same amount so
-                // both sides of the lesson reflect the real-world clock shift together.
-                if ($timetable->student_time_from) {
-                    $studentFrom = Carbon::createFromFormat('H:i:s', $timetable->student_time_from);
-                    $studentFrom->addHours($adjustmentHours);
-                    $timetable->student_time_from = $studentFrom->format('H:i:s');
-                }
-
-                if ($timetable->student_time_to) {
-                    $studentTo = Carbon::createFromFormat('H:i:s', $timetable->student_time_to);
-                    $studentTo->addHours($adjustmentHours);
-                    $timetable->student_time_to = $studentTo->format('H:i:s');
-                }
-
-                $timetable->save();
-
-                // Regenerate future TimetableEvents using the updated teacher times
-                $this->generator->regenerate($timetable->fresh());
+            if ($target === 'teacher') {
+                $this->applyTeacherAdjustment($timezone, $adjustmentHours);
+            } else {
+                $this->applyStudentAdjustment($timezone, $adjustmentHours);
             }
         });
+    }
+
+    // ──────────────────────────────────────────────────────────────────────────
+    // Private helpers
+    // ──────────────────────────────────────────────────────────────────────────
+
+    /**
+     * Shift teacher-side times (start_time, end_time, day_times) for all
+     * timetables whose teacher_timezone matches, then regenerate future events.
+     */
+    private function applyTeacherAdjustment(string $timezone, int $hours): void
+    {
+        $timetables = Timetable::where('teacher_timezone', $timezone)
+            ->where('is_active', true)
+            ->get();
+
+        foreach ($timetables as $timetable) {
+            // Default start / end
+            $startTime = Carbon::createFromFormat('H:i:s', $timetable->start_time);
+            $endTime   = Carbon::createFromFormat('H:i:s', $timetable->end_time);
+            $startTime->addHours($hours);
+            $endTime->addHours($hours);
+            $timetable->start_time = $startTime->format('H:i:s');
+            $timetable->end_time   = $endTime->format('H:i:s');
+
+            // Per-day slots
+            $dayTimes = $timetable->day_times;
+            if (!empty($dayTimes) && is_array($dayTimes)) {
+                $adjusted = [];
+                foreach ($dayTimes as $day => $dayData) {
+                    if (isset($dayData[0])) {
+                        $slots = [];
+                        foreach ($dayData as $slot) {
+                            $s = Carbon::createFromFormat('H:i:s', $slot['start_time'])->addHours($hours);
+                            $e = Carbon::createFromFormat('H:i:s', $slot['end_time'])->addHours($hours);
+                            $slots[] = ['start_time' => $s->format('H:i:s'), 'end_time' => $e->format('H:i:s')];
+                        }
+                        $adjusted[$day] = $slots;
+                    } elseif (isset($dayData['start_time'])) {
+                        $s = Carbon::createFromFormat('H:i:s', $dayData['start_time'])->addHours($hours);
+                        $e = Carbon::createFromFormat('H:i:s', $dayData['end_time'])->addHours($hours);
+                        $adjusted[$day] = ['start_time' => $s->format('H:i:s'), 'end_time' => $e->format('H:i:s')];
+                    }
+                }
+                $timetable->day_times = $adjusted;
+            }
+
+            $timetable->save();
+
+            // Regenerate future TimetableEvents from the updated teacher times
+            $this->generator->regenerate($timetable->fresh());
+        }
+    }
+
+    /**
+     * Shift student-side display times (student_time_from, student_time_to) for
+     * all timetables whose timezone (= student timezone) matches.
+     * Teacher times and events are NOT touched.
+     */
+    private function applyStudentAdjustment(string $timezone, int $hours): void
+    {
+        $timetables = Timetable::where('timezone', $timezone)
+            ->where('is_active', true)
+            ->get();
+
+        foreach ($timetables as $timetable) {
+            if ($timetable->student_time_from) {
+                $from = Carbon::createFromFormat('H:i:s', $timetable->student_time_from)->addHours($hours);
+                $timetable->student_time_from = $from->format('H:i:s');
+            }
+
+            if ($timetable->student_time_to) {
+                $to = Carbon::createFromFormat('H:i:s', $timetable->student_time_to)->addHours($hours);
+                $timetable->student_time_to = $to->format('H:i:s');
+            }
+
+            $timetable->save();
+            // No event regeneration needed — events are teacher-time-based
+        }
     }
 }

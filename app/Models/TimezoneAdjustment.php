@@ -12,6 +12,7 @@ class TimezoneAdjustment extends Model
 
     protected $fillable = [
         'timezone',
+        'target',
         'adjustment_hours',
         'applied_at',
         'applied_by',
