@@ -101,47 +101,22 @@ class TimetableCalendarController extends Controller
                 $timetable = $event->timetable;
                 $studentTimezone = $timetable?->timezone;
                 
-                // If using manual time difference and no student timezone, use stored student times
-                if ($timetable && $timetable->use_manual_time_diff && !$studentTimezone && $timetable->student_time_from && $timetable->student_time_to) {
-                    $studentTimeRange = sprintf(
-                        '%s – %s (undefined)',
-                        Carbon::today()->setTimeFromTimeString($timetable->student_time_from)->format('g:i A'),
-                        Carbon::today()->setTimeFromTimeString($timetable->student_time_to)->format('g:i A')
-                    );
-                } elseif ($timetable && $timetable->student_time_from && $timetable->student_time_to && $studentTimezone) {
-                    // Use stored student times (which include timezone adjustments) when available
-                    $studentTimeRange = sprintf(
-                        '%s – %s (%s)',
-                        Carbon::today()->setTimeFromTimeString($timetable->student_time_from)->format('g:i A'),
-                        Carbon::today()->setTimeFromTimeString($timetable->student_time_to)->format('g:i A'),
-                        $studentTimezone
-                    );
-                } elseif ($studentTimezone) {
-                    // Fallback: calculate from event times (apply total adjustments if exists)
-                    $generator = app(\App\Services\TimetableGenerator::class);
-                    $totalAdjustmentHours = $generator->getTotalAdjustmentHours($studentTimezone);
-                    
-                    // For Egypt timezone, don't apply adjustment to student times
-                    // For other timezones, apply total adjustments to student times
-                    $isEgyptTimezone = $studentTimezone === 'Africa/Cairo';
-                    $studentAdjustmentHours = $isEgyptTimezone ? 0 : $totalAdjustmentHours;
-                    
+                if ($studentTimezone) {
                     $studentStart = $event->start_at->clone()->setTimezone($studentTimezone);
                     $studentEnd = $event->end_at->clone()->setTimezone($studentTimezone);
-                    
-                    if ($studentAdjustmentHours != 0) {
-                        $studentStart->addHours($studentAdjustmentHours);
-                        $studentEnd->addHours($studentAdjustmentHours);
-                    }
-                    
                     $studentTimeRange = sprintf(
                         '%s – %s (%s)',
                         $studentStart->format('g:i A'),
                         $studentEnd->format('g:i A'),
                         $studentTimezone
                     );
+                } elseif ($timetable && $timetable->use_manual_time_diff && $timetable->student_time_from && $timetable->student_time_to) {
+                    $studentTimeRange = sprintf(
+                        '%s – %s (undefined)',
+                        Carbon::today()->setTimeFromTimeString($timetable->student_time_from)->format('g:i A'),
+                        Carbon::today()->setTimeFromTimeString($timetable->student_time_to)->format('g:i A')
+                    );
                 } else {
-                    // Fallback to teacher timezone
                     $studentTimeRange = sprintf(
                         '%s – %s (%s)',
                         $start->format('g:i A'),
@@ -149,7 +124,7 @@ class TimetableCalendarController extends Controller
                         $timezone
                     );
                 }
-                
+
                 $teacherTimeRange = sprintf(
                     '%s – %s (%s)',
                     $start->format('g:i A'),
@@ -270,14 +245,7 @@ class TimetableCalendarController extends Controller
         );
 
         // Calculate student time display
-        if ($useManualTimeDiff && $timetable->student_time_from && $timetable->student_time_to) {
-            $studentTimeRange = sprintf(
-                '%s – %s (%s)',
-                Carbon::today()->setTimeFromTimeString($timetable->student_time_from)->format('g:i A'),
-                Carbon::today()->setTimeFromTimeString($timetable->student_time_to)->format('g:i A'),
-                $studentTimezone ?: 'undefined'
-            );
-        } elseif ($studentTimezone) {
+        if ($studentTimezone) {
             $studentStart = $event->start_at->clone()->setTimezone($studentTimezone);
             $studentEnd = $event->end_at->clone()->setTimezone($studentTimezone);
             $studentTimeRange = sprintf(
@@ -285,6 +253,12 @@ class TimetableCalendarController extends Controller
                 $studentStart->format('g:i A'),
                 $studentEnd->format('g:i A'),
                 $studentTimezone
+            );
+        } elseif ($useManualTimeDiff && $timetable->student_time_from && $timetable->student_time_to) {
+            $studentTimeRange = sprintf(
+                '%s – %s (undefined)',
+                Carbon::today()->setTimeFromTimeString($timetable->student_time_from)->format('g:i A'),
+                Carbon::today()->setTimeFromTimeString($timetable->student_time_to)->format('g:i A')
             );
         } else {
             $studentTimeRange = sprintf(
@@ -375,47 +349,22 @@ class TimetableCalendarController extends Controller
         $timetable = $event->timetable;
         $studentTimezone = $timetable?->timezone;
         
-        // If using manual time difference and no student timezone, use stored student times
-        if ($timetable && $timetable->use_manual_time_diff && !$studentTimezone && $timetable->student_time_from && $timetable->student_time_to) {
-            $studentTimeRange = sprintf(
-                '%s – %s (undefined)',
-                Carbon::today()->setTimeFromTimeString($timetable->student_time_from)->format('g:i A'),
-                Carbon::today()->setTimeFromTimeString($timetable->student_time_to)->format('g:i A')
-            );
-        } elseif ($timetable && $timetable->student_time_from && $timetable->student_time_to && $studentTimezone) {
-            // Use stored student times (which include timezone adjustments) when available
-            $studentTimeRange = sprintf(
-                '%s – %s (%s)',
-                Carbon::today()->setTimeFromTimeString($timetable->student_time_from)->format('g:i A'),
-                Carbon::today()->setTimeFromTimeString($timetable->student_time_to)->format('g:i A'),
-                $studentTimezone
-            );
-        } elseif ($studentTimezone) {
-            // Fallback: calculate from event times (apply total adjustments if exists)
-            $generator = app(\App\Services\TimetableGenerator::class);
-            $totalAdjustmentHours = $generator->getTotalAdjustmentHours($studentTimezone);
-            
-            // For Egypt timezone, don't apply adjustment to student times
-            // For other timezones, apply total adjustments to student times
-            $isEgyptTimezone = $studentTimezone === 'Africa/Cairo';
-            $studentAdjustmentHours = $isEgyptTimezone ? 0 : $totalAdjustmentHours;
-            
+        if ($studentTimezone) {
             $studentStart = $event->start_at->clone()->setTimezone($studentTimezone);
             $studentEnd = $event->end_at->clone()->setTimezone($studentTimezone);
-            
-            if ($studentAdjustmentHours != 0) {
-                $studentStart->addHours($studentAdjustmentHours);
-                $studentEnd->addHours($studentAdjustmentHours);
-            }
-            
             $studentTimeRange = sprintf(
                 '%s – %s (%s)',
                 $studentStart->format('g:i A'),
                 $studentEnd->format('g:i A'),
                 $studentTimezone
             );
+        } elseif ($timetable && $timetable->use_manual_time_diff && $timetable->student_time_from && $timetable->student_time_to) {
+            $studentTimeRange = sprintf(
+                '%s – %s (undefined)',
+                Carbon::today()->setTimeFromTimeString($timetable->student_time_from)->format('g:i A'),
+                Carbon::today()->setTimeFromTimeString($timetable->student_time_to)->format('g:i A')
+            );
         } else {
-            // Fallback to teacher timezone
             $studentTimeRange = sprintf(
                 '%s – %s (%s)',
                 $start->format('g:i A'),
