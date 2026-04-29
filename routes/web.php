@@ -171,10 +171,10 @@ Route::middleware(['auth','role:admin|accountant'])->prefix('admin')->group(func
     Route::delete('financials/accountant-salary/{salary}', [AdminFinancialOverviewController::class, 'deleteAccountantSalary'])->name('admin.financials.accountant-salary.delete');
 });
 
-// Teacher routes (view-only: dashboard, classes, calendar; no add/edit)
+// Teacher routes
 Route::middleware(['auth','role:teacher'])->prefix('teacher')->name('teacher.')->group(function () {
     Route::get('/', [TeacherDashboardController::class, 'index'])->name('dashboard');
-    Route::get('lessons', [TeacherLessonController::class, 'index'])->name('lessons.index');
+    Route::resource('lessons', TeacherLessonController::class)->only(['index','create','store','edit','update','destroy']);
     Route::get('timetables/calendar', [\App\Http\Controllers\Teacher\TimetableCalendarController::class, 'index'])->name('timetables.calendar');
     Route::get('timetables/events', [\App\Http\Controllers\Teacher\TimetableCalendarController::class, 'events'])->name('timetables.events.index');
 });

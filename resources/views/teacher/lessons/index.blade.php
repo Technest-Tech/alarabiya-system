@@ -6,6 +6,13 @@
                 <h2 class="text-2xl font-bold text-gray-900 dark:text-white">My Classes</h2>
                 <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">View your classes and their status</p>
             </div>
+            <a href="{{ route('teacher.lessons.create') }}"
+               class="mt-4 sm:mt-0 inline-flex items-center px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">
+                <svg class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                </svg>
+                Add Lesson
+            </a>
         </div>
 
         <!-- Filters & Summary -->
