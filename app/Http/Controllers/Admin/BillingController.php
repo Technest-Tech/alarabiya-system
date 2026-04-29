@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\StoreManualBillingRequest;
 use App\Models\Billing;
 use App\Models\Student;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -25,7 +26,7 @@ class BillingController extends Controller
             $monthDate = Carbon::parse(sprintf('%s-01', $monthFilter))->startOfMonth();
         }
 
-        $automaticBillings = Billing::with('student')
+        $automaticBillings = Billing::with(['student', 'items'])
             ->automatic()
             ->when($monthDate, fn ($query) => $query->where('month', $monthDate->toDateString()))
             ->when($statusFilter, fn ($query) => $query->where('status', $statusFilter))
@@ -33,7 +34,7 @@ class BillingController extends Controller
             ->get()
             ->groupBy('status');
 
-        $manualBillings = Billing::with('student')
+        $manualBillings = Billing::with(['student', 'items'])
             ->manual()
             ->when($monthDate, fn ($query) => $query->where('month', $monthDate->toDateString()))
             ->when($statusFilter, fn ($query) => $query->where('status', $statusFilter))
@@ -114,6 +115,15 @@ class BillingController extends Controller
                 'month' => $payload['month'],
             ])
             ->with('status', 'Manual billing saved successfully.');
+    }
+
+    public function report(Billing $billing)
+    {
+        $billing->load(['student', 'items.lesson.teacher']);
+
+        $pdf = Pdf::loadView('admin.billings.report', compact('billing'));
+
+        return $pdf->download("Billing_{$billing->student->name}_{$billing->month_label}.pdf");
     }
 }
 

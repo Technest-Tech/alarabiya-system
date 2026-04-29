@@ -76,12 +76,17 @@ class Billing extends Model
     {
         $studentName = $this->student?->name ?? 'Student';
         $amount = number_format($this->total_amount, 2);
+        $totalHours = round($this->items->sum('duration_minutes') / 60, 2);
+        $hourlyRate = number_format($this->student?->hourly_rate ?? 0, 2);
 
         return sprintf(
-            "Hello %s, your %s lessons billing for %s is %s %s. Please complete the payment at your earliest convenience. Thank you!",
+            "Hello %s, your %s lessons billing for %s is ready. You have taken a total of %s hours at an hourly rate of %s %s. The total amount due is %s %s. Please complete the payment at your earliest convenience. Thank you!",
             $studentName,
             $this->type === 'automatic' ? 'automatic' : 'manual',
             $this->month_label,
+            $totalHours,
+            $this->currency,
+            $hourlyRate,
             $this->currency,
             $amount
         );
