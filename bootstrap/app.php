@@ -17,6 +17,10 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'role' => EnsureUserHasRole::class,
         ]);
+
+        // Hostinger sits behind the hcdn reverse proxy — trust it so request()->isSecure()
+        // and the real client IP/scheme are honored from X-Forwarded-* headers.
+        $middleware->trustProxies(at: '*');
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         // Automatically recover from 419 Page Expired (CSRF token mismatch):
