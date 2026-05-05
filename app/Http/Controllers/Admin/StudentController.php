@@ -52,23 +52,22 @@ class StudentController extends Controller
             'country_code' => ['required','string','size:2'],
             'whatsapp_number' => ['required', new \App\Rules\PhoneNumberFormat($request->country_code)],
             'package_hours_total' => ['required','integer','min:1'],
+            'monthly_hours' => ['required','numeric','min:0.5'],
             'payment_method' => ['required','in:cash,bank_transfer,credit_card,paypal,other'],
             'currency' => ['required','string','size:3','in:AED,USD,GBP,INR,EGP,EUR,SAR,KWD,QAR,JPY,CAD,AUD'],
             'assigned_teacher_id' => ['nullable','exists:teachers,id'],
         ];
-        
-        // Support role cannot set hourly_rate
+
         if (!$request->user()->isSupport()) {
             $rules['hourly_rate'] = ['required','numeric','min:0'];
         }
-        
+
         $validated = $request->validate($rules);
-        
-        // If support role, set hourly_rate to 0 (default value, accountant can update later)
+
         if ($request->user()->isSupport()) {
             $validated['hourly_rate'] = 0;
         }
-        
+
         $student = Student::create($validated);
         return redirect()->route('students.index')->with('status','Student created.');
     }
@@ -100,32 +99,30 @@ class StudentController extends Controller
             'country_code' => ['required','string','size:2'],
             'whatsapp_number' => ['required', new \App\Rules\PhoneNumberFormat($request->country_code)],
             'package_hours_total' => ['required','integer','min:1'],
+            'monthly_hours' => ['required','numeric','min:0.5'],
             'payment_method' => ['required','in:cash,bank_transfer,credit_card,paypal,other'],
             'currency' => ['required','string','size:3','in:AED,USD,GBP,INR,EGP,EUR,SAR,KWD,QAR,JPY,CAD,AUD'],
             'assigned_teacher_id' => ['nullable','exists:teachers,id'],
             'status' => ['required','in:active,disabled'],
         ];
-        
-        // Support role cannot set hourly_rate
+
         if (!$request->user()->isSupport()) {
             $rules['hourly_rate'] = ['required','numeric','min:0'];
         }
-        
+
         $validated = $request->validate($rules);
-        
-        // If support role, don't update hourly_rate (keep existing value)
+
         if ($request->user()->isSupport()) {
             unset($validated['hourly_rate']);
         }
-        
-        $oldPackageHours = $student->package_hours_total;
+
         $student->update($validated);
-        
-        // If package_hours_total changed, update current package
-        if ($oldPackageHours != $validated['package_hours_total'] && $student->currentPackage) {
-            $student->currentPackage->update(['package_hours' => $validated['package_hours_total']]);
+
+        // If monthly_hours changed, also update the current (unpaid) month's package hours
+        if ($student->currentPackage && $student->currentPackage->status !== 'paid') {
+            $student->currentPackage->update(['package_hours' => $validated['monthly_hours']]);
         }
-        
+
         return redirect()->route('students.index')->with('status','Student updated.');
     }
 

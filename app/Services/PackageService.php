@@ -5,35 +5,60 @@ namespace App\Services;
 use App\Models\Student;
 use App\Models\StudentPackage;
 use App\Models\Lesson;
+use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 
 class PackageService
 {
     /**
-     * Create a new package for a student
+     * Get or create the monthly package for a student for a given month.
+     * This is the primary entry point for lesson→package assignment.
      */
-    public function createPackage(Student $student, ?int $packageHours = null): StudentPackage
+    public function getOrCreateMonthlyPackage(Student $student, Carbon $forMonth): StudentPackage
     {
-        $packageHours = $packageHours ?? $student->package_hours_total;
+        $monthStr = $forMonth->copy()->startOfMonth()->toDateString();
 
-        // Deactivate any existing active packages
+        $existing = StudentPackage::where('student_id', $student->id)
+            ->where('month', $monthStr)
+            ->first();
+
+        if ($existing) {
+            if ($student->current_package_id !== $existing->id && $existing->status !== 'paid') {
+                $student->update(['current_package_id' => $existing->id]);
+            }
+            return $existing;
+        }
+
+        $monthlyHours = $student->monthly_hours
+            ?? $student->currentPackage?->package_hours
+            ?? $student->package_hours_total
+            ?? 20;
+
         StudentPackage::where('student_id', $student->id)
             ->where('is_active', true)
             ->update(['is_active' => false]);
 
         $package = StudentPackage::create([
             'student_id' => $student->id,
-            'package_hours' => $packageHours,
+            'month' => $monthStr,
+            'package_hours' => $monthlyHours,
             'hours_used' => 0,
-            'started_at' => now(),
+            'started_at' => $forMonth->copy()->startOfMonth(),
             'status' => 'active',
             'is_active' => true,
         ]);
 
-        // Update student's current package
         $student->update(['current_package_id' => $package->id]);
 
         return $package;
+    }
+
+    /**
+     * Create a new package for a student (legacy fallback — prefers getOrCreateMonthlyPackage)
+     */
+    public function createPackage(Student $student, ?int $packageHours = null): StudentPackage
+    {
+        return $this->getOrCreateMonthlyPackage($student, now());
     }
 
     /**
@@ -201,59 +226,53 @@ class PackageService
     }
 
     /**
-     * Mark package as paid and create new package
+     * Mark package as paid and carry pending lessons into the next month's package.
      */
     public function renewPackage(StudentPackage $package): StudentPackage
     {
-        DB::transaction(function () use ($package) {
-            // Mark current package as paid
+        $newPackage = null;
+
+        DB::transaction(function () use ($package, &$newPackage) {
             $package->markAsPaid();
 
-            // Create new package
-            $newPackage = $this->createPackage($package->student, $package->package_hours);
+            // Next billing month: package month + 1, or current month if no month set
+            $nextMonth = $package->month
+                ? Carbon::parse($package->month)->addMonth()
+                : now()->startOfMonth();
 
-            // Get all pending lessons for this student
-            // These are already split lessons, so we can move them directly
+            $newPackage = $this->getOrCreateMonthlyPackage($package->student, $nextMonth);
+
             $pendingLessons = Lesson::where('student_id', $package->student_id)
                 ->where('is_pending', true)
                 ->orderBy('date')
                 ->orderBy('id')
                 ->get();
 
-            $cumulativeMinutes = 0; // Start fresh for new package
+            $cumulativeMinutes = 0;
             $lessonNumber = 0;
 
             foreach ($pendingLessons as $lesson) {
                 $lessonNumber++;
-                
-                // Only count non-trial lessons towards cumulative and package hours
                 if (!$lesson->isTrial() && $lesson->isCalculated()) {
                     $cumulativeMinutes += $lesson->duration_minutes;
                 }
-
-                // Update lesson to new package
                 $lesson->update([
                     'student_package_id' => $newPackage->id,
                     'is_pending' => false,
                     'package_cumulative_hours' => round($cumulativeMinutes / 60, 2),
                     'package_lesson_number' => $lessonNumber,
                 ]);
-
-                // Only increment package hours for non-trial, calculated lessons
                 if (!$lesson->isTrial() && $lesson->isCalculated()) {
                     $newPackage->increment('hours_used', $lesson->duration_minutes);
                 }
             }
-            
-            // Recalculate to ensure everything is correct
+
             $this->recalculatePackageLessons($newPackage);
 
-            // Check if new package is exhausted
             if ($newPackage->isExhausted()) {
                 $newPackage->markAsCompleted();
             }
 
-            // Recalculate student hours
             $package->student->recalculateHoursTaken();
         });
 

@@ -14,7 +14,7 @@ class Student extends Model
     use HasFactory;
     protected $fillable = [
         'name', 'whatsapp_number', 'country_code', 'package_hours_total',
-        'hours_taken_cached', 'status', 'payment_method', 'hourly_rate',
+        'monthly_hours', 'hours_taken_cached', 'status', 'payment_method', 'hourly_rate',
         'currency', 'assigned_teacher_id', 'current_package_id',
     ];
 

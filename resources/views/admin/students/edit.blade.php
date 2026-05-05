@@ -70,21 +70,24 @@
 
                     <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
                         <div>
-                            <label for="package_hours_total" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                Package Hours <span class="text-red-500">*</span>
+                            <label for="monthly_hours" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                Monthly Hours <span class="text-red-500">*</span>
                             </label>
-                            <input 
-                                type="number" 
-                                name="package_hours_total" 
-                                id="package_hours_total"
-                                min="1" 
-                                value="{{ old('package_hours_total', $student->package_hours_total) }}" 
+                            <input
+                                type="number"
+                                name="monthly_hours"
+                                id="monthly_hours"
+                                min="0.5"
+                                step="0.5"
+                                value="{{ old('monthly_hours', $student->monthly_hours ?? $student->package_hours_total) }}"
                                 required
                                 class="block w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-shadow"
                             >
-                            @error('package_hours_total')
+                            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Hours allocated per billing month</p>
+                            @error('monthly_hours')
                                 <p class="mt-1 text-sm text-red-600 dark:text-red-400">{{ $message }}</p>
                             @enderror
+                            <input type="hidden" name="package_hours_total" value="{{ old('monthly_hours', $student->monthly_hours ?? $student->package_hours_total) }}">
                         </div>
 
                         <div>

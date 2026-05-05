@@ -113,15 +113,9 @@ class LessonController extends Controller
             'status' => ['required','in:attended,absent_student,absent_teacher,cancelled_student,cancelled_teacher,trial'],
         ]);
         $student = Student::findOrFail($validated['student_id']);
-        
-        // Ensure student has a current package
-        if (!$student->currentPackage) {
-            $this->packageService->createPackage($student);
-            $student->refresh();
-        }
 
         $durationMinutes = ((int)$validated['hours'] * 60) + (int)$validated['minutes'];
-        
+
         try {
             $lesson = Lesson::create([
                 'student_id' => $validated['student_id'],
@@ -132,17 +126,14 @@ class LessonController extends Controller
                 'is_trial' => $validated['status'] === 'trial',
             ]);
 
-            // Refresh student to get current package
             $student->refresh();
-            
-            // Ensure student still has a current package
-            if (!$student->currentPackage) {
-                $this->packageService->createPackage($student);
-                $student->refresh();
-            }
 
-            // Assign lesson to package
-            $this->packageService->assignLessonToPackage($lesson, $student->currentPackage);
+            $monthlyPackage = $this->packageService->getOrCreateMonthlyPackage(
+                $student,
+                \Carbon\Carbon::parse($validated['date'])
+            );
+
+            $this->packageService->assignLessonToPackage($lesson, $monthlyPackage);
             
             // Refresh lesson to get updated package info
             $lesson->refresh();
@@ -196,12 +187,6 @@ class LessonController extends Controller
             'status' => ['required','in:attended,absent_student,absent_teacher,cancelled_student,cancelled_teacher,trial'],
         ]);
         $student = Student::findOrFail($validated['student_id']);
-        
-        // Ensure student has a current package
-        if (!$student->currentPackage) {
-            $this->packageService->createPackage($student);
-            $student->refresh();
-        }
 
         $durationMinutes = ((int)$validated['hours'] * 60) + (int)$validated['minutes'];
         $lesson->update([
@@ -213,9 +198,15 @@ class LessonController extends Controller
             'is_trial' => $validated['is_trial'] ?? false,
         ]);
 
-        // Reassign lesson to package if package changed
-        if ($lesson->student_package_id !== $student->currentPackage->id) {
-            $this->packageService->assignLessonToPackage($lesson, $student->currentPackage);
+        $student->refresh();
+
+        $monthlyPackage = $this->packageService->getOrCreateMonthlyPackage(
+            $student,
+            \Carbon\Carbon::parse($validated['date'])
+        );
+
+        if ($lesson->student_package_id !== $monthlyPackage->id) {
+            $this->packageService->assignLessonToPackage($lesson, $monthlyPackage);
         } else {
             // Recalculate cumulative hours if duration changed
             $this->packageService->recalculatePackageLessons($student->currentPackage);

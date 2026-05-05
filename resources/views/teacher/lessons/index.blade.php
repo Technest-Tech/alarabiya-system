@@ -114,7 +114,7 @@
                             <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Date</th>
                             <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Student</th>
                             <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status</th>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Package</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Billing Month</th>
                             <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Lesson #</th>
                             <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Cumulative</th>
                             <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Duration</th>
@@ -175,11 +175,11 @@
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap">
                                     @if($lesson->studentPackage)
-                                        <div class="text-sm text-gray-900 dark:text-white">
-                                            {{ $lesson->studentPackage->package_hours }} hrs
+                                        <div class="text-sm font-medium text-gray-900 dark:text-white">
+                                            {{ $lesson->studentPackage->month_label ?: ('Package #' . $lesson->studentPackage->id) }}
                                         </div>
                                         <div class="text-xs text-gray-500 dark:text-gray-400">
-                                            Package #{{ $lesson->studentPackage->id }}
+                                            {{ $lesson->studentPackage->package_hours }} hrs/month
                                         </div>
                                     @else
                                         <span class="text-sm text-gray-400">—</span>

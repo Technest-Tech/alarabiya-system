@@ -10,6 +10,7 @@ class StudentPackage extends Model
 {
     protected $fillable = [
         'student_id',
+        'month',
         'package_hours',
         'hours_used',
         'started_at',
@@ -20,11 +21,17 @@ class StudentPackage extends Model
     ];
 
     protected $casts = [
+        'month' => 'date',
         'started_at' => 'datetime',
         'completed_at' => 'datetime',
         'paid_at' => 'datetime',
         'is_active' => 'boolean',
     ];
+
+    public function getMonthLabelAttribute(): string
+    {
+        return $this->month ? $this->month->format('F Y') : '';
+    }
 
     public function student(): BelongsTo
     {
