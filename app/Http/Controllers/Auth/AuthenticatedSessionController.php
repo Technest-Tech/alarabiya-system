@@ -46,10 +46,7 @@ class AuthenticatedSessionController extends Controller
             ]
         ));
 
-        if ($user && in_array($user->role, ['admin', 'support', 'accountant'])) {
-            return redirect()->intended('/admin');
-        }
-        return redirect()->intended('/teacher');
+        return redirect()->intended($user?->dashboardPath() ?? '/teacher');
     }
 
     /**

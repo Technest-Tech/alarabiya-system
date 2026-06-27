@@ -79,4 +79,14 @@ class User extends Authenticatable
     {
         return in_array($this->role, ['admin', 'support', 'accountant']);
     }
+
+    /**
+     * Where this user should land after logging in / when already authenticated.
+     * Used by the root route and the guest middleware so authenticated users are
+     * never bounced back to /login (which caused an ERR_TOO_MANY_REDIRECTS loop).
+     */
+    public function dashboardPath(): string
+    {
+        return $this->canAccessAdminDashboard() ? '/admin' : '/teacher';
+    }
 }

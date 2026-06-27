@@ -21,6 +21,13 @@ use App\Http\Controllers\Teacher\LessonController as TeacherLessonController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
+    // Send authenticated users to their dashboard; only guests go to /login.
+    // (If this always redirected to /login, an already-authenticated user would
+    // loop: guest middleware on /login bounces them to '/', which bounced back
+    // to /login -> ERR_TOO_MANY_REDIRECTS.)
+    if ($user = auth()->user()) {
+        return redirect($user->dashboardPath());
+    }
     return redirect()->route('login');
 });
 
