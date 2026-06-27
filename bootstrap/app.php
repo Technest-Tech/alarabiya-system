@@ -5,7 +5,9 @@ use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Request;
 use Illuminate\Session\TokenMismatchException;
+use Illuminate\Support\Facades\Log;
 use App\Http\Middleware\EnsureUserHasRole;
+use App\Support\AuthDiagnostics;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -26,6 +28,10 @@ return Application::configure(basePath: dirname(__DIR__))
         // Automatically recover from 419 Page Expired (CSRF token mismatch):
         // clear session, regenerate token, redirect to login so user can retry without clearing cookies.
         $exceptions->render(function (TokenMismatchException $e, Request $request) {
+            // Track every 419 so intermittent "Page Expired" cases are diagnosable.
+            // The cookie counts/flags here reveal the root cause (see AuthDiagnostics).
+            Log::channel('auth')->warning('csrf.token_mismatch (419 Page Expired)', AuthDiagnostics::context($request));
+
             $request->session()->invalidate();
             $request->session()->regenerateToken();
             return redirect()->route('login')

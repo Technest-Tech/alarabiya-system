@@ -2,9 +2,11 @@
 
 namespace App\Http\Requests\Auth;
 
+use App\Support\AuthDiagnostics;
 use Illuminate\Auth\Events\Lockout;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
@@ -46,6 +48,13 @@ class LoginRequest extends FormRequest
         if (! Auth::attempt($this->only('email', 'password'), true)) {
             RateLimiter::hit($this->throttleKey());
 
+            // Track failed logins (wrong credentials) so we can tell them apart
+            // from session/CSRF failures when diagnosing "can't log in" reports.
+            Log::channel('auth')->notice('login.failed (bad credentials)', array_merge(
+                AuthDiagnostics::context($this),
+                ['email' => (string) $this->string('email')]
+            ));
+
             throw ValidationException::withMessages([
                 'email' => trans('auth.failed'),
             ]);
@@ -68,6 +77,11 @@ class LoginRequest extends FormRequest
         event(new Lockout($this));
 
         $seconds = RateLimiter::availableIn($this->throttleKey());
+
+        Log::channel('auth')->warning('login.throttled (too many attempts)', array_merge(
+            AuthDiagnostics::context($this),
+            ['email' => (string) $this->string('email'), 'available_in_seconds' => $seconds]
+        ));
 
         throw ValidationException::withMessages([
             'email' => trans('auth.throttle', [

@@ -73,6 +73,17 @@ return [
             'replace_placeholders' => true,
         ],
 
+        // Dedicated channel for login / session / CSRF diagnostics.
+        // Writes to storage/logs/auth.log regardless of the global LOG_LEVEL so
+        // intermittent "Page Expired" / can't-login issues stay traceable in production.
+        'auth' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/auth.log'),
+            'level' => 'debug',
+            'days' => env('LOG_AUTH_DAYS', 30),
+            'replace_placeholders' => true,
+        ],
+
         'slack' => [
             'driver' => 'slack',
             'url' => env('LOG_SLACK_WEBHOOK_URL'),
