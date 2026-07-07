@@ -19,6 +19,9 @@ return [
         'Africa/Algiers' => 'Algeria (Algiers)',
         'Africa/Casablanca' => 'Morocco (Casablanca)',
 
+        // South Asia
+        'Asia/Kolkata' => 'India (New Delhi, Mumbai, Kolkata)',
+
         // European region
         'Europe/London' => 'United Kingdom (London)',
         'Europe/Dublin' => 'Ireland (Dublin)',
