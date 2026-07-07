@@ -23,53 +23,41 @@ class LessonController extends Controller
     public function index()
     {
         $teacher = Auth::user()->teacher;
-        $month = (int) request('month', now()->month);
+        $monthParam = request('month', now()->month);
+        // "all" (or 0) means show every past & current class, ignoring month/year.
+        $showAll = in_array((string) $monthParam, ['all', '0'], true);
+        $month = $showAll ? 'all' : (int) $monthParam;
         $year = (int) request('year', now()->year);
         $studentId = request('student_id');
-        
-        $query = Lesson::with(['student.currentPackage','studentPackage'])
-            ->where('teacher_id', $teacher->id);
-        
-        // If student is selected, show all lessons from their active/pending packages
-        // Otherwise, filter by month/year
-        if ($studentId) {
-            $student = Student::find($studentId);
-            if ($student) {
-                // Get all active and completed (but not paid) package IDs for this student
+
+        // Shared closure so the list query and the totals query stay in sync.
+        $applyScope = function ($query) use ($studentId, $showAll, $year, $month) {
+            if ($studentId) {
+                // Student selected: show lessons from their active/pending packages
                 $packageIds = StudentPackage::where('student_id', $studentId)
                     ->whereIn('status', ['active', 'completed'])
                     ->pluck('id');
-                
+
                 $query->where('student_id', $studentId)
                     ->whereIn('student_package_id', $packageIds);
+            } elseif (! $showAll) {
+                // Apply month/year filter only when not viewing all classes
+                $query->whereYear('date', $year)
+                    ->whereMonth('date', $month);
             }
-        } else {
-            // Apply month/year filter only when no student is selected
-            $query->whereYear('date', $year)
-                ->whereMonth('date', $month);
-        }
-        
-        $lessons = $query->latest('date')->paginate(20);
-        
-        // Calculate total minutes with same logic
-        $totalMinutesQuery = Lesson::where('teacher_id', $teacher->id);
-        
-        if ($studentId) {
-            $student = Student::find($studentId);
-            if ($student) {
-                $packageIds = StudentPackage::where('student_id', $studentId)
-                    ->whereIn('status', ['active', 'completed'])
-                    ->pluck('id');
-                
-                $totalMinutesQuery->where('student_id', $studentId)
-                    ->whereIn('student_package_id', $packageIds);
-            }
-        } else {
-            $totalMinutesQuery->whereYear('date', $year)
-                ->whereMonth('date', $month);
-        }
-        
-        $totalMinutes = $totalMinutesQuery->sum('duration_minutes');
+            // else: no date filter — show all of this teacher's classes
+
+            return $query;
+        };
+
+        $lessons = $applyScope(
+            Lesson::with(['student.currentPackage','studentPackage'])
+                ->where('teacher_id', $teacher->id)
+        )->latest('date')->paginate(20)->withQueryString();
+
+        $totalMinutes = $applyScope(
+            Lesson::where('teacher_id', $teacher->id)
+        )->sum('duration_minutes');
         
         // Get all students assigned to this teacher
         $students = Student::active()
@@ -84,6 +72,7 @@ class LessonController extends Controller
             'year' => $year,
             'students' => $students,
             'studentId' => $studentId,
+            'showAll' => $showAll,
         ]);
     }
 

@@ -32,14 +32,15 @@
                     <div>
                         <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Month</label>
                         <select name="month" onchange="this.form.submit()" class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 {{ $studentId ? 'opacity-50 cursor-not-allowed' : '' }}" {{ $studentId ? 'disabled' : '' }}>
+                            <option value="all" @selected($showAll)>All months (past &amp; current)</option>
                             @for($m=1;$m<=12;$m++)
-                                <option value="{{ $m }}" @selected($m==$month)>{{ DateTime::createFromFormat('!m', $m)->format('F') }}</option>
+                                <option value="{{ $m }}" @selected(!$showAll && $m==$month)>{{ DateTime::createFromFormat('!m', $m)->format('F') }}</option>
                             @endfor
                         </select>
                     </div>
                     <div>
                         <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Year</label>
-                        <select name="year" onchange="this.form.submit()" class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 {{ $studentId ? 'opacity-50 cursor-not-allowed' : '' }}" {{ $studentId ? 'disabled' : '' }}>
+                        <select name="year" onchange="this.form.submit()" class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 {{ $studentId || $showAll ? 'opacity-50 cursor-not-allowed' : '' }}" {{ $studentId || $showAll ? 'disabled' : '' }}>
                             @for($y=now()->year-2;$y<=now()->year+1;$y++)
                                 <option value="{{ $y }}" @selected($y==$year)>{{ $y }}</option>
                             @endfor
@@ -93,7 +94,7 @@
                 </form>
                 <div class="flex items-center space-x-4">
                     <div class="text-right">
-                        <p class="text-sm text-gray-600 dark:text-gray-400">{{ $studentId ? 'Total (Active Packages)' : 'Total This Month' }}</p>
+                        <p class="text-sm text-gray-600 dark:text-gray-400">{{ $studentId ? 'Total (Active Packages)' : ($showAll ? 'Total (All Classes)' : 'Total This Month') }}</p>
                         <p class="text-2xl font-bold text-indigo-600 dark:text-indigo-400">{{ number_format($totalMinutes / 60, 1) }} hrs</p>
                     </div>
                     <div class="flex h-12 w-12 items-center justify-center rounded-lg bg-indigo-100 dark:bg-indigo-900/20">
