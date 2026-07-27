@@ -23,10 +23,13 @@
                         Apply
                     </button>
                 </form>
-                <a href="{{ route('admin.teacher-salaries.index', ['month' => $month]) }}"
-                   class="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg text-sm font-semibold hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
-                    View Salaries
-                </a>
+                {{-- Salaries are for admin/accountant only; support enters adjustments but can't view salaries. --}}
+                @if(auth()->user()->isAdmin() || auth()->user()->isAccountant())
+                    <a href="{{ route('admin.teacher-salaries.index', ['month' => $month]) }}"
+                       class="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg text-sm font-semibold hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                        View Salaries
+                    </a>
+                @endif
             </div>
         </div>
 
