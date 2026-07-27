@@ -55,13 +55,33 @@
             </div>
         @endif
 
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        @php
+            $sumBase = $summaries->sum('salary_amount');
+            $sumRewards = $summaries->sum('rewards');
+            $sumDeductions = $summaries->sum('deductions');
+            $sumNet = $summaries->sum('net_salary');
+        @endphp
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div class="rounded-lg border border-gray-200 dark:border-gray-700 p-6 bg-white dark:bg-gray-800">
-                <p class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Total Payout</p>
-                <p class="mt-2 text-3xl font-bold text-gray-900 dark:text-white">EGP {{ number_format($totalPayout, 2) }}</p>
+                <p class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Base Salaries</p>
+                <p class="mt-2 text-2xl font-bold text-gray-900 dark:text-white">{{ number_format($sumBase, 2) }}</p>
                 <p class="text-xs text-gray-500 dark:text-gray-400">{{ $monthLabel }}</p>
             </div>
+            <div class="rounded-lg border border-green-200 dark:border-green-800 p-6 bg-green-50 dark:bg-green-900/10">
+                <p class="text-xs font-semibold text-green-700 dark:text-green-400 uppercase tracking-wide">Rewards</p>
+                <p class="mt-2 text-2xl font-bold text-green-700 dark:text-green-400">+{{ number_format($sumRewards, 2) }}</p>
+            </div>
+            <div class="rounded-lg border border-red-200 dark:border-red-800 p-6 bg-red-50 dark:bg-red-900/10">
+                <p class="text-xs font-semibold text-red-700 dark:text-red-400 uppercase tracking-wide">Deductions</p>
+                <p class="mt-2 text-2xl font-bold text-red-700 dark:text-red-400">−{{ number_format($sumDeductions, 2) }}</p>
+            </div>
+            <div class="rounded-lg border border-indigo-200 dark:border-indigo-800 p-6 bg-indigo-50 dark:bg-indigo-900/10">
+                <p class="text-xs font-semibold text-indigo-700 dark:text-indigo-400 uppercase tracking-wide">Net Payout</p>
+                <p class="mt-2 text-2xl font-bold text-indigo-700 dark:text-indigo-400">{{ number_format($sumNet, 2) }}</p>
+                <a href="{{ route('admin.teacher-adjustments.index', ['month' => $month]) }}" class="text-xs text-indigo-600 dark:text-indigo-400 hover:underline">Manage rewards/deductions →</a>
+            </div>
         </div>
+        <p class="-mt-4 text-xs text-gray-400">Amounts shown in each teacher's own currency; totals mix currencies.</p>
 
         <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-sm overflow-hidden">
             <div class="overflow-x-auto">
@@ -72,14 +92,17 @@
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Lessons</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Total Hours</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Hourly Rate</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Salary</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Base</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Rewards</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Deductions</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Net</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status</th>
                             <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Actions</th>
                         </tr>
                     </thead>
                     <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                         @forelse($summaries as $summary)
-                            <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+                            <tr x-data="{ open: false }" class="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
                                 <td class="px-6 py-4">
                                     <div class="text-sm font-medium text-gray-900 dark:text-white">
                                         {{ $summary['teacher']->user?->name ?? 'Unassigned' }}
@@ -97,10 +120,22 @@
                                 <td class="px-6 py-4 text-sm text-gray-900 dark:text-white">
                                     {{ $summary['currency'] ?? 'EGP' }} {{ number_format($summary['hourly_rate'], 2) }}
                                 </td>
-                                <td class="px-6 py-4 text-sm font-semibold text-gray-900 dark:text-white">
-                                    EGP {{ number_format($summary['salary_amount'], 2) }}
-                                    @if(($summary['currency'] ?? 'EGP') === 'USD')
-                                        <span class="text-xs text-gray-500 dark:text-gray-400 ml-1">(USD converted)</span>
+                                @php $cur = $summary['currency'] ?? 'EGP'; $adjCount = ($summary['adjustments'] ?? collect())->count(); @endphp
+                                <td class="px-6 py-4 text-sm text-gray-900 dark:text-white whitespace-nowrap">
+                                    {{ $cur }} {{ number_format($summary['salary_amount'], 2) }}
+                                </td>
+                                <td class="px-6 py-4 text-sm font-medium whitespace-nowrap {{ ($summary['rewards'] ?? 0) > 0 ? 'text-green-600 dark:text-green-400' : 'text-gray-400' }}">
+                                    {{ ($summary['rewards'] ?? 0) > 0 ? '+'.number_format($summary['rewards'], 2) : '—' }}
+                                </td>
+                                <td class="px-6 py-4 text-sm font-medium whitespace-nowrap {{ ($summary['deductions'] ?? 0) > 0 ? 'text-red-600 dark:text-red-400' : 'text-gray-400' }}">
+                                    {{ ($summary['deductions'] ?? 0) > 0 ? '−'.number_format($summary['deductions'], 2) : '—' }}
+                                </td>
+                                <td class="px-6 py-4 text-sm font-bold text-gray-900 dark:text-white whitespace-nowrap">
+                                    {{ $cur }} {{ number_format($summary['net_salary'] ?? $summary['salary_amount'], 2) }}
+                                    @if($adjCount > 0)
+                                        <button type="button" @click="open = !open" class="ml-1 text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:underline">
+                                            <span x-text="open ? 'hide' : '{{ $adjCount }} reason{{ $adjCount > 1 ? 's' : '' }}'"></span>
+                                        </button>
                                     @endif
                                 </td>
                                 <td class="px-6 py-4">
@@ -132,9 +167,26 @@
                                     </div>
                                 </td>
                             </tr>
+                            @if($adjCount > 0)
+                                <tr x-show="open" x-cloak class="bg-gray-50 dark:bg-gray-900/40">
+                                    <td colspan="10" class="px-6 py-3">
+                                        <div class="space-y-1">
+                                            @foreach($summary['adjustments'] as $adj)
+                                                <div class="flex items-start gap-3 text-sm">
+                                                    <span class="mt-0.5 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium {{ $adj->isReward() ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400' : 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400' }}">
+                                                        {{ $adj->isReward() ? '+' : '−' }}{{ number_format($adj->amount, 2) }} {{ $cur }}
+                                                    </span>
+                                                    <span class="text-gray-700 dark:text-gray-300 flex-1">{{ $adj->reason }}</span>
+                                                    <span class="text-xs text-gray-400">{{ $adj->creator?->name }} · {{ $adj->created_at?->format('M d') }}</span>
+                                                </div>
+                                            @endforeach
+                                        </div>
+                                    </td>
+                                </tr>
+                            @endif
                         @empty
                             <tr>
-                                <td colspan="7" class="px-6 py-12 text-center text-sm text-gray-500 dark:text-gray-400">
+                                <td colspan="10" class="px-6 py-12 text-center text-sm text-gray-500 dark:text-gray-400">
                                     No salary data available for {{ $monthLabel }}.
                                 </td>
                             </tr>

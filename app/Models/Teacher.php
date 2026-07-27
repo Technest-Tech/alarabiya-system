@@ -46,4 +46,9 @@ class Teacher extends Model
     {
         return $this->hasMany(TeacherSalary::class);
     }
+
+    public function adjustments(): HasMany
+    {
+        return $this->hasMany(TeacherAdjustment::class);
+    }
 }

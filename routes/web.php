@@ -16,6 +16,7 @@ use App\Http\Controllers\Admin\SupportAttendanceController as AdminSupportAttend
 use App\Http\Controllers\Admin\PackageNotificationsController as AdminPackageNotificationsController;
 use App\Http\Controllers\Admin\SettingsController as AdminSettingsController;
 use App\Http\Controllers\Admin\FinancialOverviewController as AdminFinancialOverviewController;
+use App\Http\Controllers\Admin\TeacherAdjustmentController as AdminTeacherAdjustmentController;
 use App\Http\Controllers\Teacher\DashboardController as TeacherDashboardController;
 use App\Http\Controllers\Teacher\LessonController as TeacherLessonController;
 use Illuminate\Support\Facades\Route;
@@ -64,7 +65,12 @@ Route::middleware(['auth','role:admin|support|accountant'])->prefix('admin')->gr
         'update' => 'teachers.update',
         'destroy' => 'teachers.destroy',
     ]);
-    
+
+    // Teacher rewards & deductions (applied to monthly salary) - admin, support, accountant
+    Route::get('teacher-adjustments', [AdminTeacherAdjustmentController::class, 'index'])->name('admin.teacher-adjustments.index');
+    Route::post('teacher-adjustments', [AdminTeacherAdjustmentController::class, 'store'])->name('admin.teacher-adjustments.store');
+    Route::delete('teacher-adjustments/{adjustment}', [AdminTeacherAdjustmentController::class, 'destroy'])->name('admin.teacher-adjustments.destroy');
+
     // Lessons - accessible by admin and support
     Route::middleware(['role:admin|support'])->group(function () {
         Route::resource('lessons', AdminLessonController::class)->only(['index','create','store','edit','update','destroy'])->names([

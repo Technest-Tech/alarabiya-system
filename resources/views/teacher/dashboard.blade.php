@@ -59,6 +59,63 @@
             </div>
         </div>
 
+        <!-- Rewards & Deductions -->
+        @if($recentAdjustments->isNotEmpty())
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <div>
+                        <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Rewards &amp; Deductions</h3>
+                        <p class="text-sm text-gray-500 dark:text-gray-400">Adjustments applied to your salary, with reasons.</p>
+                    </div>
+                    <div class="text-right">
+                        <p class="text-xs text-gray-500 dark:text-gray-400">Net this month ({{ $currentMonthLabel }})</p>
+                        <p class="text-xl font-bold {{ $currentNet >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400' }}">
+                            {{ $currentNet >= 0 ? '+' : '−' }}{{ number_format(abs($currentNet), 2) }} {{ $teacherCurrency }}
+                        </p>
+                        <p class="text-xs text-gray-400">
+                            <span class="text-green-600 dark:text-green-400">+{{ number_format($currentRewards, 2) }}</span>
+                            &nbsp;·&nbsp;
+                            <span class="text-red-600 dark:text-red-400">−{{ number_format($currentDeductions, 2) }}</span>
+                        </p>
+                    </div>
+                </div>
+
+                @if($currentAdjustments->isNotEmpty())
+                    <div class="space-y-2 mb-4">
+                        @foreach($currentAdjustments as $adj)
+                            <div class="flex items-start gap-3 p-3 rounded-lg border {{ $adj->isReward() ? 'border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/10' : 'border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/10' }}">
+                                <span class="mt-0.5 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold {{ $adj->isReward() ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300' }}">
+                                    {{ $adj->isReward() ? 'Reward +' : 'Deduction −' }}{{ number_format($adj->amount, 2) }} {{ $teacherCurrency }}
+                                </span>
+                                <p class="flex-1 text-sm text-gray-700 dark:text-gray-300">{{ $adj->reason }}</p>
+                                <span class="text-xs text-gray-400 whitespace-nowrap">{{ $adj->created_at?->format('M d') }}</span>
+                            </div>
+                        @endforeach
+                    </div>
+                @else
+                    <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">No rewards or deductions this month.</p>
+                @endif
+
+                @php $earlier = $recentAdjustments->filter(fn($a) => $a->month->format('Y-m') !== now()->format('Y-m')); @endphp
+                @if($earlier->isNotEmpty())
+                    <div class="pt-4 border-t border-gray-200 dark:border-gray-700">
+                        <p class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">Earlier</p>
+                        <div class="space-y-1">
+                            @foreach($earlier as $adj)
+                                <div class="flex items-center gap-3 text-sm">
+                                    <span class="font-semibold {{ $adj->isReward() ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400' }} whitespace-nowrap">
+                                        {{ $adj->isReward() ? '+' : '−' }}{{ number_format($adj->amount, 2) }} {{ $teacherCurrency }}
+                                    </span>
+                                    <span class="flex-1 text-gray-600 dark:text-gray-400 truncate">{{ $adj->reason }}</span>
+                                    <span class="text-xs text-gray-400 whitespace-nowrap">{{ $adj->month->isoFormat('MMM YYYY') }}</span>
+                                </div>
+                            @endforeach
+                        </div>
+                    </div>
+                @endif
+            </div>
+        @endif
+
         <!-- View Classes -->
         <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
             <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">My Classes</h3>

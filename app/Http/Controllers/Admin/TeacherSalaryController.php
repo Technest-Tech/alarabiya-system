@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Lesson;
 use App\Models\Teacher;
+use App\Models\TeacherAdjustment;
 use App\Models\TeacherSalary;
 use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
@@ -73,7 +74,7 @@ class TeacherSalaryController extends Controller
 
         $callback = function () use ($summaries) {
             $handle = fopen('php://output', 'w');
-            fputcsv($handle, ['Teacher', 'Currency', 'Lessons', 'Total Hours', 'Hourly Rate', 'Salary Amount (EGP)', 'Status']);
+            fputcsv($handle, ['Teacher', 'Currency', 'Lessons', 'Total Hours', 'Hourly Rate', 'Base Salary', 'Rewards', 'Deductions', 'Net Salary', 'Status']);
 
             foreach ($summaries as $summary) {
                 $currency = $summary['currency'] ?? 'EGP';
@@ -84,6 +85,9 @@ class TeacherSalaryController extends Controller
                     number_format($summary['total_hours'], 2),
                     number_format($summary['hourly_rate'], 2) . ' ' . $currency,
                     number_format($summary['salary_amount'], 2),
+                    number_format($summary['rewards'] ?? 0, 2),
+                    number_format($summary['deductions'] ?? 0, 2),
+                    number_format($summary['net_salary'] ?? $summary['salary_amount'], 2),
                     ucfirst($summary['status']),
                 ]);
             }
@@ -176,7 +180,13 @@ class TeacherSalaryController extends Controller
             return strtolower($teacher->user->name ?? '');
         });
 
-        return $teachers->map(function (Teacher $teacher) use ($lessonStats, $start) {
+        // Rewards (bonuses) and deductions (penalties) for this month, keyed by teacher.
+        $adjustmentsByTeacher = TeacherAdjustment::whereDate('month', $start->toDateString())
+            ->orderBy('created_at')
+            ->get()
+            ->groupBy('teacher_id');
+
+        return $teachers->map(function (Teacher $teacher) use ($lessonStats, $start, $adjustmentsByTeacher) {
             $stats = $lessonStats->get($teacher->id);
             $lessonCount = (int) ($stats->lesson_count ?? 0);
             $totalMinutes = (int) ($stats->total_minutes ?? 0);
@@ -240,6 +250,12 @@ class TeacherSalaryController extends Controller
                 }
             }
 
+            // Fold in rewards/deductions (stored in the teacher's currency, same as the base).
+            $teacherAdjustments = $adjustmentsByTeacher->get($teacher->id, collect());
+            $rewardsTotal = round((float) $teacherAdjustments->where('type', 'reward')->sum('amount'), 2);
+            $deductionsTotal = round((float) $teacherAdjustments->where('type', 'deduction')->sum('amount'), 2);
+            $netSalary = round($salaryRecord->total_amount + $rewardsTotal - $deductionsTotal, 2);
+
             return [
                 'teacher' => $teacher,
                 'lessons' => $lessonCount,
@@ -247,6 +263,10 @@ class TeacherSalaryController extends Controller
                 'total_hours' => round($totalMinutes / 60, 2),
                 'hourly_rate' => $hourlyRate,
                 'salary_amount' => $salaryRecord->total_amount,
+                'rewards' => $rewardsTotal,
+                'deductions' => $deductionsTotal,
+                'net_salary' => $netSalary,
+                'adjustments' => $teacherAdjustments,
                 'currency' => $currency,
                 'status' => $salaryRecord->status,
                 'record' => $salaryRecord,

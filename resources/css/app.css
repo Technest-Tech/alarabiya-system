@@ -2,6 +2,9 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Hide Alpine x-cloak elements until Alpine initializes (prevents content flash). */
+[x-cloak] { display: none !important; }
+
 @import "@fullcalendar/core/index.css";
 @import "@fullcalendar/daygrid/index.css";
 @import "@fullcalendar/timegrid/index.css";
