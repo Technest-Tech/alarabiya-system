@@ -18,8 +18,10 @@ class PackageService
     {
         $monthStr = $forMonth->copy()->startOfMonth()->toDateString();
 
+        // whereDate so the comparison holds regardless of how the driver stores
+        // the date (MySQL keeps a bare DATE, SQLite a 'Y-m-d H:i:s' string).
         $existing = StudentPackage::where('student_id', $student->id)
-            ->where('month', $monthStr)
+            ->whereDate('month', $monthStr)
             ->first();
 
         if ($existing) {

@@ -49,11 +49,17 @@ class TeacherSalaryController extends Controller
             }
         });
 
+        // Share of the payout the academy covers for free trial lessons
+        $totalTrialCost = $summaries->sum('trial_amount');
+        $totalTrialLessons = $summaries->sum('trial_lessons');
+
         return view('admin.teachers.salaries.index', [
             'summaries' => $summaries,
             'month' => $month->format('Y-m'),
             'monthLabel' => $month->isoFormat('MMMM YYYY'),
             'totalPayout' => $totalPayoutEGP,
+            'totalTrialCost' => $totalTrialCost,
+            'totalTrialLessons' => $totalTrialLessons,
             'availableMonths' => $availableMonths,
         ]);
     }
@@ -74,7 +80,7 @@ class TeacherSalaryController extends Controller
 
         $callback = function () use ($summaries) {
             $handle = fopen('php://output', 'w');
-            fputcsv($handle, ['Teacher', 'Currency', 'Lessons', 'Total Hours', 'Hourly Rate', 'Base Salary', 'Rewards', 'Deductions', 'Net Salary', 'Status']);
+            fputcsv($handle, ['Teacher', 'Currency', 'Lessons', 'Total Hours', 'Trial Lessons', 'Trial Hours', 'Trial Cost (Academy)', 'Hourly Rate', 'Base Salary', 'Rewards', 'Deductions', 'Net Salary', 'Status']);
 
             foreach ($summaries as $summary) {
                 $currency = $summary['currency'] ?? 'EGP';
@@ -83,6 +89,9 @@ class TeacherSalaryController extends Controller
                     $currency,
                     $summary['lessons'],
                     number_format($summary['total_hours'], 2),
+                    $summary['trial_lessons'] ?? 0,
+                    number_format($summary['trial_hours'] ?? 0, 2),
+                    number_format($summary['trial_amount'] ?? 0, 2) . ' ' . $currency,
                     number_format($summary['hourly_rate'], 2) . ' ' . $currency,
                     number_format($summary['salary_amount'], 2),
                     number_format($summary['rewards'] ?? 0, 2),
@@ -170,7 +179,19 @@ class TeacherSalaryController extends Controller
         $start = $month->copy()->startOfMonth();
         $end = $month->copy()->endOfMonth();
 
+        // Trial lessons are free for the student but still paid to the teacher,
+        // so they are included here via the teacherPayable scope.
         $lessonStats = Lesson::selectRaw('teacher_id, COUNT(*) as lesson_count, SUM(duration_minutes) as total_minutes')
+            ->teacherPayable()
+            ->whereBetween('date', [$start->toDateString(), $end->toDateString()])
+            ->groupBy('teacher_id')
+            ->get()
+            ->keyBy('teacher_id');
+
+        // Portion of the above that the academy covers instead of the student.
+        $trialStats = Lesson::selectRaw('teacher_id, COUNT(*) as lesson_count, SUM(duration_minutes) as total_minutes')
+            ->teacherPayable()
+            ->academyPaid()
             ->whereBetween('date', [$start->toDateString(), $end->toDateString()])
             ->groupBy('teacher_id')
             ->get()
@@ -186,13 +207,19 @@ class TeacherSalaryController extends Controller
             ->get()
             ->groupBy('teacher_id');
 
-        return $teachers->map(function (Teacher $teacher) use ($lessonStats, $start, $adjustmentsByTeacher) {
+        return $teachers->map(function (Teacher $teacher) use ($lessonStats, $trialStats, $start, $adjustmentsByTeacher) {
             $stats = $lessonStats->get($teacher->id);
             $lessonCount = (int) ($stats->lesson_count ?? 0);
             $totalMinutes = (int) ($stats->total_minutes ?? 0);
             $hourlyRate = (float) ($teacher->user?->hourly_rate ?? 0);
             $currency = $teacher->currency ?? 'EGP';
-            
+
+            // Academy-covered (trial) share of this teacher's payable lessons
+            $trial = $trialStats->get($teacher->id);
+            $trialLessonCount = (int) ($trial->lesson_count ?? 0);
+            $trialMinutes = (int) ($trial->total_minutes ?? 0);
+            $trialAmount = round(($trialMinutes / 60) * $hourlyRate, 2);
+
             // Calculate salary in teacher's original currency
             $salaryAmount = round(($totalMinutes / 60) * $hourlyRate, 2);
 
@@ -263,6 +290,10 @@ class TeacherSalaryController extends Controller
                 'total_hours' => round($totalMinutes / 60, 2),
                 'hourly_rate' => $hourlyRate,
                 'salary_amount' => $salaryRecord->total_amount,
+                'trial_lessons' => $trialLessonCount,
+                'trial_minutes' => $trialMinutes,
+                'trial_hours' => round($trialMinutes / 60, 2),
+                'trial_amount' => $trialAmount,
                 'rewards' => $rewardsTotal,
                 'deductions' => $deductionsTotal,
                 'net_salary' => $netSalary,

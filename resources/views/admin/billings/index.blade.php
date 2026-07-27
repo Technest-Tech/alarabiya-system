@@ -45,6 +45,12 @@
                         Filter
                     </button>
                 </form>
+
+                <a href="{{ route('admin.billings.export', ['tab' => $activeTab, 'month' => $monthFilter, 'status' => $statusFilter]) }}"
+                   class="w-full sm:w-auto inline-flex items-center justify-center px-6 py-2.5 bg-emerald-500 text-white hover:bg-emerald-600 text-sm font-bold rounded-xl shadow-lg hover:shadow-xl transition-all focus:outline-none focus:ring-4 focus:ring-emerald-300/50 transform hover:-translate-y-0.5">
+                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                    Export {{ $monthFilter ? \Carbon\Carbon::parse($monthFilter.'-01')->isoFormat('MMMM YYYY') : 'All Months' }}
+                </a>
             </div>
         </div>
 

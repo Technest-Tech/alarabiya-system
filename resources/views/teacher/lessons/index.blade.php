@@ -174,6 +174,13 @@
                                     <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {{ $color }}">
                                         {{ $label }}
                                     </span>
+                                    @if($lesson->isAcademyPaid())
+                                        <div class="mt-1">
+                                            <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-300" title="Free for the student — the academy pays you for this lesson">
+                                                Paid by academy
+                                            </span>
+                                        </div>
+                                    @endif
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap">
                                     @if($lesson->studentPackage)

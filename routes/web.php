@@ -164,6 +164,7 @@ Route::middleware(['auth','role:admin|accountant'])->prefix('admin')->group(func
     Route::get('package-notifications', [AdminPackageNotificationsController::class, 'index'])->name('admin.package-notifications.index');
     Route::post('package-notifications/{package}/mark-paid', [AdminPackageNotificationsController::class, 'markAsPaid'])->name('admin.package-notifications.mark-paid');
     Route::get('billings', [AdminBillingController::class, 'index'])->name('admin.billings.index');
+    Route::get('billings/export', [AdminBillingController::class, 'export'])->name('admin.billings.export');
     Route::get('billings/{billing}/report', [AdminBillingController::class, 'report'])->name('admin.billings.report');
     Route::post('billings/manual', [AdminBillingController::class, 'storeManual'])->name('admin.billings.manual.store');
     Route::patch('billings/{billing}/mark-paid', [AdminBillingController::class, 'markPaid'])->name('admin.billings.markPaid');

@@ -61,7 +61,7 @@
             $sumDeductions = $summaries->sum('deductions');
             $sumNet = $summaries->sum('net_salary');
         @endphp
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
             <div class="rounded-lg border border-gray-200 dark:border-gray-700 p-6 bg-white dark:bg-gray-800">
                 <p class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Base Salaries</p>
                 <p class="mt-2 text-2xl font-bold text-gray-900 dark:text-white">{{ number_format($sumBase, 2) }}</p>
@@ -80,8 +80,13 @@
                 <p class="mt-2 text-2xl font-bold text-indigo-700 dark:text-indigo-400">{{ number_format($sumNet, 2) }}</p>
                 <a href="{{ route('admin.teacher-adjustments.index', ['month' => $month]) }}" class="text-xs text-indigo-600 dark:text-indigo-400 hover:underline">Manage rewards/deductions →</a>
             </div>
+            <div class="rounded-lg border border-blue-200 dark:border-blue-800 p-6 bg-blue-50 dark:bg-blue-900/20">
+                <p class="text-xs font-semibold text-blue-700 dark:text-blue-300 uppercase tracking-wide">Trials Covered by Academy</p>
+                <p class="mt-2 text-2xl font-bold text-blue-900 dark:text-blue-200">{{ number_format($totalTrialCost, 2) }}</p>
+                <p class="text-xs text-blue-700 dark:text-blue-300">{{ $totalTrialLessons }} trial {{ \Illuminate\Support\Str::plural('lesson', $totalTrialLessons) }} — free for students, paid to teachers</p>
+            </div>
         </div>
-        <p class="-mt-4 text-xs text-gray-400">Amounts shown in each teacher's own currency; totals mix currencies.</p>
+        <p class="-mt-4 text-xs text-gray-400">Amounts shown in each teacher's own currency; totals mix currencies. Trial pay is already included in Base/Net.</p>
 
         <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-sm overflow-hidden">
             <div class="overflow-x-auto">
@@ -91,6 +96,8 @@
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Teacher</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Lessons</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Total Hours</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Trials</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Trial Cost</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Hourly Rate</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Base</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Rewards</th>
@@ -116,6 +123,24 @@
                                 </td>
                                 <td class="px-6 py-4 text-sm text-gray-900 dark:text-white">
                                     {{ number_format($summary['total_hours'], 2) }} hrs
+                                </td>
+                                <td class="px-6 py-4 text-sm">
+                                    @if(($summary['trial_lessons'] ?? 0) > 0)
+                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-300">
+                                            {{ $summary['trial_lessons'] }}
+                                        </span>
+                                        <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">{{ number_format($summary['trial_hours'] ?? 0, 2) }} hrs</div>
+                                    @else
+                                        <span class="text-gray-400 dark:text-gray-500">—</span>
+                                    @endif
+                                </td>
+                                <td class="px-6 py-4 text-sm text-gray-900 dark:text-white whitespace-nowrap">
+                                    @if(($summary['trial_amount'] ?? 0) > 0)
+                                        {{ $summary['currency'] ?? 'EGP' }} {{ number_format($summary['trial_amount'], 2) }}
+                                        <div class="text-xs text-gray-500 dark:text-gray-400">included in salary</div>
+                                    @else
+                                        <span class="text-gray-400 dark:text-gray-500">—</span>
+                                    @endif
                                 </td>
                                 <td class="px-6 py-4 text-sm text-gray-900 dark:text-white">
                                     {{ $summary['currency'] ?? 'EGP' }} {{ number_format($summary['hourly_rate'], 2) }}
@@ -169,7 +194,7 @@
                             </tr>
                             @if($adjCount > 0)
                                 <tr x-show="open" x-cloak class="bg-gray-50 dark:bg-gray-900/40">
-                                    <td colspan="10" class="px-6 py-3">
+                                    <td colspan="12" class="px-6 py-3">
                                         <div class="space-y-1">
                                             @foreach($summary['adjustments'] as $adj)
                                                 <div class="flex items-start gap-3 text-sm">
@@ -186,7 +211,7 @@
                             @endif
                         @empty
                             <tr>
-                                <td colspan="10" class="px-6 py-12 text-center text-sm text-gray-500 dark:text-gray-400">
+                                <td colspan="12" class="px-6 py-12 text-center text-sm text-gray-500 dark:text-gray-400">
                                     No salary data available for {{ $monthLabel }}.
                                 </td>
                             </tr>
