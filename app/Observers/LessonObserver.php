@@ -3,6 +3,7 @@
 namespace App\Observers;
 
 use App\Models\Lesson;
+use App\Models\LessonActivity;
 use App\Services\Billing\BillingService;
 use App\Services\PackageService;
 use Illuminate\Support\Facades\Log;
@@ -17,11 +18,18 @@ class LessonObserver
 
     public function created(Lesson $lesson): void
     {
+        LessonActivity::record($lesson, 'created', LessonActivity::snapshot($lesson));
+
         $this->billingService->syncLesson($lesson);
     }
 
     public function updated(Lesson $lesson): void
     {
+        $diff = LessonActivity::diff($lesson);
+        if ($diff !== []) {
+            LessonActivity::record($lesson, 'updated', $diff);
+        }
+
         $original = [
             'lesson_id' => $lesson->id,
             'student_id' => $lesson->getOriginal('student_id'),
@@ -43,13 +51,23 @@ class LessonObserver
         }
     }
 
-    public function deleted(Lesson $lesson): void
+    /**
+     * Remove the billing item BEFORE the row is deleted. The billing_items
+     * foreign key is ON DELETE SET NULL, so once the lesson is gone the item
+     * can no longer be found by lesson_id and would stay billed forever.
+     */
+    public function deleting(Lesson $lesson): void
     {
         try {
             $this->billingService->removeLesson($lesson);
         } catch (\Exception $e) {
             Log::error('Error removing lesson from billing: ' . $e->getMessage());
         }
+    }
+
+    public function deleted(Lesson $lesson): void
+    {
+        LessonActivity::record($lesson, 'deleted', LessonActivity::snapshot($lesson));
 
         // Recalculate package if lesson had a package
         try {
