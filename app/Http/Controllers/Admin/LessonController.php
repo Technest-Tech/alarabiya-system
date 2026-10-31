@@ -47,7 +47,12 @@ class LessonController extends Controller
             $query->where('teacher_id', $teacherId);
         }
 
-        $lessons = $query->latest('date')->paginate(30);
+        $lessons = $query
+            ->orderByDesc('date')
+            ->orderByDesc('id')
+            ->paginate(30)
+            // Keep teacher/student/month/year filters on the page links
+            ->withQueryString();
 
         // Calculate statistics for the filtered results
         $statsQuery = Lesson::whereYear('date', $year)
@@ -195,7 +200,9 @@ class LessonController extends Controller
             'duration_minutes' => $durationMinutes,
             'date' => $validated['date'],
             'status' => $validated['status'],
-            'is_trial' => $validated['is_trial'] ?? false,
+            // Keep the flag in sync with the status, same as on create. Trial
+            // lessons stay free for the student and paid to the teacher.
+            'is_trial' => $validated['status'] === 'trial',
         ]);
 
         $student->refresh();

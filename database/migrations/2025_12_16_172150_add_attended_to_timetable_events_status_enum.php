@@ -12,6 +12,12 @@ return new class extends Migration
      */
     public function up(): void
     {
+        // ENUM is MySQL-specific; SQLite (used by the test suite) stores the
+        // column as TEXT and needs no change.
+        if (DB::getDriverName() !== 'mysql') {
+            return;
+        }
+
         DB::statement("ALTER TABLE `timetable_events` MODIFY COLUMN `status` ENUM('scheduled', 'cancelled', 'rescheduled', 'absent', 'attended') NULL");
     }
 
@@ -20,6 +26,10 @@ return new class extends Migration
      */
     public function down(): void
     {
+        if (DB::getDriverName() !== 'mysql') {
+            return;
+        }
+
         DB::statement("ALTER TABLE `timetable_events` MODIFY COLUMN `status` ENUM('scheduled', 'cancelled', 'rescheduled', 'absent') NULL");
     }
 };
